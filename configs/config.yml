@@ -1,0 +1,34 @@
+# ==============================================================================
+# Master configuration file for the ERA5 Pollution Risk Pipeline (Branch 1)
+# This file organizes all pipeline configuration components into logical groups.
+# Each group either contains inline parameters or points to a separate YAML 
+# file.
+# ==============================================================================
+
+model:
+  # Target column used by the Branch 1 baseline model
+  target: t2m
+
+era5:
+  # ERA5 ingestion + preprocessing configuration
+  config: configs/era5.yml
+
+paths:
+  # Directory structure for raw, intermediate, features, models, predictions
+  config: configs/paths.yml
+
+variables:
+  # Full 21‑variable ERA5 meteorological feature set
+  config: configs/variables.yml
+
+years:
+  # Years to download/process (minimal list)
+  config: configs/years.yml
+
+months:
+  # Months to download/process (minimal list)
+  config: configs/months.yml
+
+region:
+  # Geographic bounding box for ERA5 extraction
+  config: configs/region.yml

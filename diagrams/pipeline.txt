@@ -1,0 +1,49 @@
+ERA5 Pipeline (Branch 1 MVP)
+----------------------------
+
+[download_01]
+    - download_era5_single.py
+        • downloads ONLY the single-variable GRIB (2m_temperature)
+        • produces:
+            - 2m_temperature_2023_09.grib
+            - 2m_temperature_2023_09.grib.<hash>.idx
+    - download_era5_monthly.py
+        • downloads all-variables ZIP + GRIB (optional in Branch 1)
+        ↓ raw files (exactly 4)
+            • all-variables ZIP
+            • all-variables GRIB
+            • single-variable GRIB (2m_temperature)
+            • single-variable IDX (cfgrib index, with <hash> suffix)
+
+[preprocessing_02]
+    - unzip_grib.py
+        • extracts all-variables GRIB from ZIP (optional for Branch 1)
+        • does NOT modify single-variable GRIB
+    - inspect_grib.py
+        • inspects ONLY the single-variable GRIB
+        • validates schema + cfgrib metadata
+    - convert_grib_to_parquet.py
+        • converts ONLY the single-variable GRIB
+        ↓ intermediate/
+            • 2m_temperature_2023_09.parquet
+
+[features_03]
+    - minimal feature engineering
+        • operates ONLY on the single-variable Parquet file
+        • produces a small feature set (t2m + time fields)
+        ↓ features/
+            • features.parquet
+
+[modeling_04]
+    - baseline pollution-risk model
+        • trains ONLY on features.parquet
+        • simple regression model (Branch 1)
+        ↓ models/
+            • model.pkl
+
+[evaluation_05]
+    - basic metrics + plots
+        • evaluates ONLY the baseline model
+        • predicts ONLY on features.parquet
+        ↓ predictions/
+            • predictions.parquet

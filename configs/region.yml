@@ -1,0 +1,10 @@
+# ==============================================================================
+# Geographic bounding box for ERA5 data extraction.
+# Coordinates follow the CDS API convention:
+#   north, west, south, east
+# ==============================================================================
+
+north: 35.0
+west: -120.0
+south: 33.0
+east: -116.0

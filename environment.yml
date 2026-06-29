@@ -1,0 +1,80 @@
+name: era5-pollution-risk
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  # ----------------------------------------------------------------------------
+  # Core Python version
+  # ----------------------------------------------------------------------------
+  # Python 3.10 is required because climate packages (eccodes, cfgrib, cartopy)
+  # do NOT reliably support Python 3.12+. Using 3.10 ensures stable GRIB
+  # decoding and geospatial operations.
+  - python=3.10
+
+  # ----------------------------------------------------------------------------
+  # Core scientific stack
+  # ----------------------------------------------------------------------------
+  # numpy: numerical computing
+  # pandas: tabular data (Parquet, EDA, time-series checks)
+  # xarray: N-dimensional labeled arrays for climate data
+  # netcdf4: support for NetCDF files (ERA5 auxiliary formats)
+  # scipy: scientific utilities (interpolation, statistics)
+  - numpy
+  - pandas
+  - xarray
+  - netcdf4
+  - scipy
+
+  # ----------------------------------------------------------------------------
+  # ERA5 + climate data tools
+  # ----------------------------------------------------------------------------
+  # cdsapi: download ERA5 data from the Copernicus Data Store
+  # eccodes: ECMWF's official GRIB decoder
+  # cfgrib: Python interface to GRIB → xarray using eccodes
+  - cdsapi
+  - eccodes
+  - cfgrib
+
+  # ----------------------------------------------------------------------------
+  # Geospatial + mapping stack
+  # ----------------------------------------------------------------------------
+  # cartopy: geospatial utilities (maps, projections)
+  # shapely: geometric operations (polygons, boundaries)
+  # pyproj: coordinate reference system transformations
+  - cartopy
+  - shapely
+  - pyproj
+
+  # ----------------------------------------------------------------------------
+  # Visualization stack
+  # ----------------------------------------------------------------------------
+  # matplotlib: core plotting library
+  # seaborn: statistical visualization
+  - matplotlib
+  - seaborn
+
+  # ----------------------------------------------------------------------------
+  # Utility packages
+  # ----------------------------------------------------------------------------
+  # pyyaml: load YAML configs (variables.yml, paths.yml, region.yml)
+  # tqdm: progress bars for downloads and preprocessing
+  # requests: HTTP utilities (used by cdsapi)
+  # rich: clean terminal logging and diagnostics
+  - pyyaml
+  - tqdm
+  - requests
+  - rich
+
+  # ----------------------------------------------------------------------------
+  # Jupyter support
+  # ----------------------------------------------------------------------------
+  - jupyterlab
+
+  # ----------------------------------------------------------------------------
+  # pip-only packages
+  # ----------------------------------------------------------------------------
+  - pip:
+      - aiohttp          # async HTTP client (optional for async downloads)
+      - python-dotenv    # load environment variables from .env
+      - pyarrow          # fast Parquet read/write backend

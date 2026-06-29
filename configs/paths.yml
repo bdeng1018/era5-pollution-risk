@@ -1,0 +1,25 @@
+# ==============================================================================
+# Directory paths used throughout the pipeline.
+# All paths are relative to the project root.
+# ==============================================================================
+
+project_root: .
+
+# RAW DATA — ECMWF downloads + extracted GRIBs + cfgrib .idx
+raw_dir: data/raw/era5
+
+# INTERMEDIATE — Branch 1 produces exactly ONE file here:
+#   2m_temperature_2023_09.parquet
+intermediate_dir: data/intermediate
+
+# LOGS — runtime logs
+logs_dir: data/logs
+
+# FEATURES — ML-ready features
+features_dir: data/features
+
+# MODEL ARTIFACTS — trained model files
+model_artifact_dir: models
+
+# PREDICTIONS — model outputs
+predictions_dir: data/predictions
