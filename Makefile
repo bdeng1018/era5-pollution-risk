@@ -1,81 +1,99 @@
 # ==============================================================================
-# ERA5 Pollution Risk Pipeline — Branch 1
-# Makefile for running each stage of the pipeline in sequence.
+# ERA5 Pollution Risk Pipeline — Branch 2
+# Makefile for running pipeline stages in correct sequence.
 #
-# This Makefile provides a simple, reproducible interface for:
-#   1. Validating the environment
-#   2. Downloading ERA5 data
-#   3. Converting GRIB → Parquet
-#   4. Building features
-#   5. Training a baseline model
-#   6. Evaluating model performance
+# IMPORTANT — CDS API Credentials (required for Stage 01)
+# ------------------------------------------------------------------------------
+# ERA5 downloads require valid CDS API credentials stored in shell environment:
 #
-# Each stage depends on the previous one, ensuring correct execution order.
+#   export CDSAPI_URL="https://cds.climate.copernicus.eu/api"
+#   export CDSAPI_KEY="<your-key-here>"
+#
+# Add these lines to ~/.zshrc (macOS default) or ~/.bashrc if using bash.
+# Reload your shell:
+#
+#   source ~/.zshrc
+#
+# Verify:
+#
+#   echo $$CDSAPI_URL
+#   echo $$CDSAPI_KEY
+#
+# Without these variables, Stage 01 (download) will fail.
+#
+# Branch 2 status:
+#   ✓ Stage 1 (Download) complete
+#   ✓ Stage 1 metadata + retry logic complete
+#   ✓ Stage 1 test suite complete
+#   ✓ Stage 2 unzip/inspect/convert modules complete
+#   ✓ Stage 2 test suite complete
+#   → Stage 2 orchestration via run_preprocessing.py
 # ==============================================================================
 
-.PHONY: env download preprocess features train evaluate test all
+.PHONY: env download preprocess features train evaluate test all clean-cache clean-pyc
 
 # ------------------------------------------------------------------------------
 # Stage 00 — Environment validation
 # ------------------------------------------------------------------------------
-# Checks that required packages, directories, and configuration files exist.
-# This runs before any other stage to prevent pipeline failures.
 env:
-    python -m src.utils.env_check
+	python -m src.utils.env_check
 
 # ------------------------------------------------------------------------------
-# Stage 01 — Download ERA5 data
+# Stage 01 — Download ERA5 data (Branch 2)
 # ------------------------------------------------------------------------------
-# Downloads ERA5 monthly data using the CDS API.
-# Output: GRIB files stored in data/raw/era5/
 download: env
-    python -m src.download_01.download_era5_monthly
+	python -m src.download_01.download_era5_monthly --config configs/config.yml
 
 # ------------------------------------------------------------------------------
-# Stage 02 — Preprocessing (GRIB → Parquet)
+# Stage 02 — Preprocessing (Branch 2)
 # ------------------------------------------------------------------------------
-# 1. Unzips downloaded ERA5 archives
-# 2. Inspects GRIB metadata for correctness
-# 3. Converts GRIB → Parquet for downstream processing
-# Output: Parquet files stored in data/intermediate/
 preprocess: download
-    python -m src.preprocessing_02.unzip_grib
-    python -m src.preprocessing_02.inspect_grib
-    python -m src.preprocessing_02.convert_grib_to_parquet
+	python -m src.preprocessing_02.run_preprocessing --config configs/config.yml
 
 # ------------------------------------------------------------------------------
-# Stage 03 — Feature Engineering
+# Stage 03 — Feature Engineering (Branch 1 baseline)
 # ------------------------------------------------------------------------------
-# Builds derived features from intermediate Parquet files.
-# Output: features.parquet stored in data/features/
 features: preprocess
-    python -m src.features_03.build_features
+	python -m src.features_03.build_features
 
 # ------------------------------------------------------------------------------
-# Stage 04 — Modeling
+# Stage 04 — Modeling (Branch 1 baseline)
 # ------------------------------------------------------------------------------
-# Trains a baseline model using engineered features.
-# Output: model.pkl stored in models/
 train: features
-    python -m src.modeling_04.train_model
+	python -m src.modeling_04.train_model
 
 # ------------------------------------------------------------------------------
-# Stage 05 — Evaluation
+# Stage 05 — Evaluation (Branch 1 baseline)
 # ------------------------------------------------------------------------------
-# Evaluates the trained model and generates metrics.
-# Output: predictions.parquet stored in data/predictions/
 evaluate: train
-    python -m src.evaluation_05.evaluate_model
+	python -m src.evaluation_05.evaluate_model
 
 # ------------------------------------------------------------------------------
-# Run all tests
+# Run all tests (Branch 2)
 # ------------------------------------------------------------------------------
-# Executes unit tests for each pipeline stage.
 test:
-    pytest -q
+	pytest -q
 
 # ------------------------------------------------------------------------------
-# Full pipeline (Stages 01 → 05)
+# Branch 1: Full pipeline (Stages 01 → 05)
+# Branch 2: Stages 01 → 02
 # ------------------------------------------------------------------------------
-# Runs the entire pipeline end‑to‑end.
 all: download preprocess features train evaluate
+branch2:
+	make download
+	make preprocess
+
+# ------------------------------------------------------------------------------
+# Clean Python caches (pyc + __pycache__ + pytest cache)
+# ------------------------------------------------------------------------------
+clean-cache:
+	find . -name "*.pyc" -delete
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	rm -rf .pytest_cache/
+
+# ------------------------------------------------------------------------------
+# Clean only Python bytecode caches
+# ------------------------------------------------------------------------------
+clean-pyc:
+	find . -name "*.pyc" -delete
+	find . -type d -name "__pycache__" -exec rm -rf {} +

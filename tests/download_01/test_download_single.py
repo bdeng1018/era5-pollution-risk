@@ -1,7 +1,5 @@
 """
 Branch 2: Single-Variable ERA5 Downloader
------------------------------------------
-
 Used by Stage 1 tests. Must remain stable and monkeypatch-friendly.
 """
 
@@ -11,7 +9,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-import cdsapi  # required for monkeypatching
+import cdsapi
 
 from src.utils.config import load_variables
 from src.utils.logging import get_logger
@@ -19,15 +17,15 @@ from src.utils.paths import Paths
 
 logger = get_logger(__name__)
 
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Module-level client (required for monkeypatching)
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 client = cdsapi.Client()
 
 
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Directory validation (required by Stage 1 tests)
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 
 def validate_directories() -> None:
     paths = Paths()
@@ -35,9 +33,9 @@ def validate_directories() -> None:
         Path(d).mkdir(parents=True, exist_ok=True)
 
 
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Environment validation
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 
 def validate_environment() -> None:
     validate_directories()
@@ -46,9 +44,9 @@ def validate_environment() -> None:
         raise EnvironmentError("Missing CDS credentials")
 
 
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Config validation
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 
 def validate_config() -> bool:
     paths = Paths()
@@ -65,9 +63,9 @@ def validate_config() -> bool:
         return False
 
 
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Retry wrapper
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 
 def download_with_retry(request: dict, outfile: Path) -> Optional[Path]:
     max_attempts = 3
@@ -87,9 +85,9 @@ def download_with_retry(request: dict, outfile: Path) -> Optional[Path]:
     return None
 
 
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Single-variable download
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 
 def download_variable(variable: str, year: str, month: str) -> Optional[Path]:
     logger.info(f"[stage1] Branch 2 download start: {variable} {year}-{month}")
@@ -129,9 +127,9 @@ def download_variable(variable: str, year: str, month: str) -> Optional[Path]:
     return result
 
 
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # CLI entrypoint
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 
 def main():
     variables = load_variables()

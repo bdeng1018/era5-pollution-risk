@@ -1,34 +1,33 @@
 # ==============================================================================
-# Master configuration file for the ERA5 Pollution Risk Pipeline (Branch 1)
-# This file organizes all pipeline configuration components into logical groups.
-# Each group either contains inline parameters or points to a separate YAML 
-# file.
+# Branch 2 Configuration
+# Modular configuration for ERA5 ingestion, preprocessing, and pipeline structure.
 # ==============================================================================
 
-model:
-  # Target column used by the Branch 1 baseline model
-  target: t2m
-
 era5:
-  # ERA5 ingestion + preprocessing configuration
-  config: configs/era5.yml
+  # ERA5 ingestion configuration (single-variable + monthly)
+  variables: configs/variables.yml
+  years: configs/years.yml
+  months: configs/months.yml
+  region: configs/region.yml
 
 paths:
-  # Directory structure for raw, intermediate, features, models, predictions
+  # Directory structure for raw data, metadata, intermediate files, logs, etc.
   config: configs/paths.yml
 
-variables:
-  # Full 21‑variable ERA5 meteorological feature set
-  config: configs/variables.yml
+metadata:
+  # Metadata schema for Branch 2 ingestion
+  enabled: true
+  format: json
 
-years:
-  # Years to download/process (minimal list)
-  config: configs/years.yml
+environment:
+  # Environment validation requirements (Branch 2)
+  require_cdsapi_credentials: true
+  require_cfgrib: false
+  require_eccodes: false
 
-months:
-  # Months to download/process (minimal list)
-  config: configs/months.yml
-
-region:
-  # Geographic bounding box for ERA5 extraction
-  config: configs/region.yml
+model:
+  # Model configuration (not used in Branch 2 ingestion, kept for pipeline completeness)
+  target: t2m
+  artifact_dir: models
+  features_dir: data/features
+  predictions_dir: data/predictions

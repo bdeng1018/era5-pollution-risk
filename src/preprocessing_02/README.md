@@ -1,132 +1,188 @@
-# preprocessing_02 — ERA5 GRIB → Parquet Conversion
+# preprocessing_02 — ERA5 GRIB Preprocessing Pipeline (Stage 2)
 
-This stage converts ERA5 GRIB files into clean, analysis‑ready Parquet files for
-downstream feature engineering and modeling.  
-**Branch 1 (MVP)** processes *only the single‑variable GRIB file* produced by
-`download_era5_single.py`.  
-**Branch 2** expands this into a full multi‑variable preprocessing suite.
+`preprocessing_02` implements the full Stage 2 preprocessing pipeline for ERA5 data.
+Stage 2 transforms raw ERA5 monthly ZIP archives and GRIB files into clean,
+column‑oriented Parquet files ready for feature engineering, merging, and modeling.
+
+Stage 2 is the bridge between raw meteorological data and structured ML‑ready data.
 
 ---
 
 ## 🎯 Purpose
 
-- Load raw GRIB files produced in `download_01`
-- Convert GRIB → xarray → pandas → Parquet
-- Produce lightweight, column‑oriented data for fast feature engineering
-- Maintain a clean, modular preprocessing stage that scales in Branch 2
+Stage 2 performs three core operations:
+
+1. Unzip monthly ERA5 ZIP archives → multi‑variable GRIBs
+2. Inspect all GRIB files → generate `.idx` indexes + metadata
+3. Convert GRIB → Parquet (single‑variable + multi‑variable)
+
+This produces a complete intermediate dataset in:
+
+```markdown
+data/intermediate/
+```
+
+which Stage 3 parallelization and Stage 4 merging will consume.
 
 ---
 
-## 🧭 Branch 1 (MVP) Scope
+## 🧭 Branch Philosophy
 
-Branch 1 keeps preprocessing intentionally simple:
+### Branch 1 — MVP
 
-- Convert **only single‑variable GRIBs** (e.g., `2m_temperature_2023_09.grib`)
-- Minimal logging (start/end of each conversion)
-- No schema validation
+A minimal preprocessing pipeline designed for early prototyping.
+
+- Handles only single‑variable GRIBs
+- No ZIP ingestion
 - No metadata extraction
+- No schema validation
 - No parallelization
-- No multi‑variable ingestion
-- No multi‑year orchestration
+- Converts one GRIB → one Parquet
+- Supports early feature engineering and model experimentation
 
-This is sufficient to support a minimal pollution‑risk model.
+### Branch 2 — Full Pipeline
+
+A production‑grade preprocessing stage.
+
+- Full monthly ZIP ingestion
+- Multi‑variable GRIB support
+- GRIB metadata extraction
+- `.idx` generation for fast cfgrib access
+- Schema + dimension validation
+- Unified pipeline orchestration
+- Structured logging
+- Error handling + retries
+- Ready for Branch 3 parallelization
+
+Branch 2 is the first branch where Stage 2 becomes a real pipeline, not a collection of utilities.
 
 ---
 
-## 🚀 Branch 2 (Full Pipeline) Scope
-
-Branch 2 expands preprocessing into a production‑grade stage:
-
-- GRIB metadata inspection  
-- Variable/dimension validation  
-- Schema enforcement  
-- Multi‑variable ingestion (monthly ZIPs)  
-- Parallel GRIB → Parquet conversion  
-- Metadata tracking (timestamps, hashes, run IDs)  
-- Error handling + retries  
-- Structured logging to file  
-
----
-
-## 📁 Files in This Folder
+## 📁 Folder Structure
 
 ```markdown
 preprocessing_02/
 │
 ├── __init__.py
-├── convert_grib_to_parquet.py   # Branch 1: single-variable conversion
-├── inspect_grib.py              # Branch 1: single-variable inspection
-└── unzip_grib.py                # Branch 2: monthly ZIP ingestion
+│
+├── unzip_grib.py
+│   Extract monthly ZIP archives into GRIB files.
+│   Branch 1: placeholder
+│   Branch 2: full ZIP ingestion
+│
+├── inspect_grib.py
+│   Inspect GRIB structure, variables, dimensions.
+│   Generates cfgrib index (.idx) files.
+│   Branch 1: single-variable only
+│   Branch 2: multi-variable support
+│
+├── convert_grib_to_parquet.py
+│   Convert GRIB → Parquet.
+│   Branch 1: single-variable conversion
+│   Branch 2: multi-variable conversion + metadata
+│
+└── run_preprocessing.py
+    Unified Stage 2 orchestrator.
+    Runs: unzip → inspect → convert.
+    Required for Branch 3 parallelization.
 ```
 
----
-
-## 🔧 How It Works (Conceptual Flow)
+## 🔧 How Stage 2 Works (Full Branch 2 Flow)
 
 ```markdown
-single-variable GRIB file
-↓
-open with cfgrib / xarray
-↓
-convert to pandas DataFrame
-↓
-write to Parquet
+era5_YYYY_MM.zip
+↓ unzip_grib.py
+era5_YYYY_MM.grib
+↓ inspect_grib.py
+era5_YYYY_MM.grib.<hash>.idx
+↓ convert_grib_to_parquet.py
+era5_YYYY_MM.parquet
 ↓
 data/intermediate/
 ```
 
----
-
-## 🧩 Dependencies
-
-This stage relies on:
-
-- `src/utils/paths.py` — resolve directories  
-- `src/utils/logging.py` — lightweight logging  
-- `xarray` + `cfgrib` — GRIB ingestion  
-- `pandas` — DataFrame + Parquet writing  
+Single‑variable GRIBs follow the same flow but skip the ZIP step.
 
 ---
 
-## 🧪 Testing
+## 📦 Outputs
 
-Branch 1:
-- smoke tests for single-variable GRIB → Parquet  
-- ensure Parquet files are created  
+Stage 2 produces:
 
-Branch 2:
-- GRIB metadata validation tests  
-- schema tests  
-- multi-variable ingestion tests  
-- parallel conversion tests  
+- Single‑variable Parquet files
+`2m_temperature_YYYY_MM.parquet`
+
+- Multi‑variable Parquet files
+`era5_YYYY_MM.parquet`
+
+- cfgrib index files
+`*.grib.<hash>.idx`
+
+- (Branch 3+) metadata JSON
+`stage2_metadata.json`
 
 ---
 
-## ▶️ Running This Stage
+## 🧪 Testing Strategy
+
+### Branch 1
+
+- GRIB → Parquet smoke tests
+- Validate Parquet schema
+- Validate directory creation
+
+### Branch 2
+
+- Multi‑variable GRIB inspection tests
+- `.idx` generation tests
+- Schema + dimension validation
+- Multi‑variable conversion tests
+- Full pipeline orchestration tests
+- Error handling + retry tests
+
+---
+
+## ▶️ Running Stage 2
 
 From the project root:
+
+```bash
+python -m src.preprocessing_02.run_preprocessing
+```
+
+or via Makefile:
 
 ```bash
 make preprocess
 ```
 
-This calls the `main()` function inside `convert_grib_to_parquet.py`.
+This runs the full pipeline:
+
+```markdown
+unzip → inspect → convert
+```
 
 ---
 
-## 🔮 Future Enhancements (Branch 2)
+## 🔮 Future Enhancements (Branch 3+)
 
-- Parallel GRIB → Parquet conversion  
-- Automatic variable filtering  
-- Spatial/temporal normalization  
-- Metadata JSON per file  
-- Error handling + retries  
-- Multi‑year ingestion  
-- Multi‑variable ZIP extraction + conversion  
+- Parallel GRIB → Parquet conversion
+- Distributed ingestion (Ray/Dask)
+- Metadata lineage tracking
+- Automatic variable filtering
+- Spatial/temporal normalization
+- Multi‑variable merging
+- Pipeline run IDs + audit logs
+- Environment validation (eccodes, cfgrib, xarray)
 
 ---
 
 ## 📌 Notes
 
-Branch 1 is intentionally lightweight.  
-Its primary goal is to produce clean Parquet files so feature engineering can begin immediately.
+Stage 2 is intentionally modular:
+
+- Each operation is isolated (`unzip`, `inspect`, `convert`)
+- The orchestrator (`run_preprocessing.py`) ties them together
+- Branch 3 parallelization wraps the orchestrator, not the utilities
+
+This keeps the pipeline clean, testable, and scalable.

@@ -1,23 +1,25 @@
 """
-Configuration loading utilities for the ERA5 pipeline.
+Branch 2 Configuration Loader
+-----------------------------
 
-This module provides:
-- a safe YAML loader with clear error messages
-- dedicated loaders for paths, years, months, variables, and model configs
-- a unified `load_config()` function used by notebooks and Branch 1 scripts
+Branch 2 requires:
+- clean YAML loading
+- explicit validation of required keys
+- correct loading of paths.yml (including config_dir)
+- correct loading of variables, years, months
+- non-fatal config validation for ingestion
 
-Branch 1 only requires:
-- paths (directory structure)
-- model configuration (target column)
-
-All other YAML files remain available for earlier pipeline stages but are
-not included in the unified config to keep Branch 1 lightweight.
+This module replaces the Branch 1 loader.
 """
 
 from pathlib import Path
+
 import yaml
 
 
+# ------------------------------------------------------------------------------
+# Generic YAML loader
+# ------------------------------------------------------------------------------
 def load_yaml(path: str | Path) -> dict:
     """Load a YAML file and return its contents as a dictionary."""
     path = Path(path)
@@ -27,44 +29,112 @@ def load_yaml(path: str | Path) -> dict:
         return yaml.safe_load(f)
 
 
+# ------------------------------------------------------------------------------
+# Branch 2: Load paths.yml
+# ------------------------------------------------------------------------------
 def load_paths() -> dict:
-    """Load `paths.yml` from the configs directory."""
-    return load_yaml(Path("configs/paths.yml"))
+    """
+    Load configs/paths.yml relative to project root.
+    """
+    project_root = Path(__file__).resolve().parents[2]
+    path = project_root / "configs" / "paths.yml"
+    cfg = load_yaml(path)
+
+    required = [
+        "raw_dir",
+        "metadata_dir",
+        "intermediate_dir",
+        "logs_dir",
+        "features_dir",
+        "model_artifact_dir",
+        "predictions_dir",
+        "config_dir",
+    ]
+
+    missing = [k for k in required if k not in cfg]
+    if missing:
+        raise KeyError(f"Missing keys in paths.yml: {missing}")
+
+    return cfg
 
 
-def load_years() -> dict:
-    """Load `years.yml` from the configs directory."""
-    return load_yaml(Path("configs/years.yml"))
+# ------------------------------------------------------------------------------
+# Branch 2: Load ingestion configs
+# ------------------------------------------------------------------------------
+def load_years() -> list[str]:
+    project_root = Path(__file__).resolve().parents[2]
+    path = project_root / "configs" / "years.yml"
+
+    data = load_yaml(path)
+    if not isinstance(data, list):
+        raise TypeError(f"years.yml must be a list, got {type(data)}")
+
+    return data
+
+def load_months() -> list[str]:
+    project_root = Path(__file__).resolve().parents[2]
+    path = project_root / "configs" / "months.yml"
+
+    data = load_yaml(path)
+    if not isinstance(data, list):
+        raise TypeError(f"months.yml must be a list, got {type(data)}")
+
+    return data
+
+def load_variables() -> list[str]:
+    project_root = Path(__file__).resolve().parents[2]
+    path = project_root / "configs" / "variables.yml"
+
+    data = load_yaml(path)
+    if not isinstance(data, list):
+        raise TypeError(f"variables.yml must be a list, got {type(data)}")
+
+    return data
 
 
-def load_months() -> dict:
-    """Load `months.yml` from the configs directory."""
-    return load_yaml(Path("configs/months.yml"))
+def load_region() -> dict:
+    project_root = Path(__file__).resolve().parents[2]
+    path = project_root / "configs" / "region.yml"
+
+    data = load_yaml(path)
+    if not isinstance(data, dict):
+        raise TypeError(f"region.yml must be a dict, got {type(data)}")
+
+    return data
 
 
-def load_variables() -> dict:
-    """Load `variables.yml` from the configs directory."""
-    return load_yaml(Path("configs/variables.yml"))
+# ------------------------------------------------------------------------------
+# Branch 2: Load master config (optional)
+# ------------------------------------------------------------------------------
+def load_master_config() -> dict:
+    """
+    Load configs/config.yml relative to project root.
+    Branch 2 ingestion does not require this file, but notebooks do.
+    """
+    project_root = Path(__file__).resolve().parents[2]
+    path = project_root / "configs" / "config.yml"
+
+    data = load_yaml(path)
+    if not isinstance(data, dict):
+        raise TypeError(f"config.yml must be a dict, got {type(data)}")
+
+    return data
 
 
-def load_model_config() -> dict:
-    """Load `config.yml` (model configuration) from the configs directory."""
-    return load_yaml(Path("configs/config.yml"))
-
-
+# ------------------------------------------------------------------------------
+# Branch 2 unified loader (used by notebooks)
+# ------------------------------------------------------------------------------
 def load_config() -> dict:
     """
-    Unified configuration loader for notebooks and Branch 1 pipeline scripts.
-
-    Returns:
-        {
-            "paths": <directory configuration>,
-            "model": <model target column>,
-        }
+    Unified configuration loader for notebooks and later pipeline stages.
+    Branch 2 ingestion does NOT require this.
     """
+    master = load_master_config()
+
     return {
         "paths": load_paths(),
-        "model": load_model_config()["model"],
+        "era5": master.get("era5", {}),
+        "model": master.get("model", {}),
     }
 
 

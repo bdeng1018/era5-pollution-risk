@@ -1,6 +1,6 @@
 # ==============================================================================
-# ERA5 Pollution Risk Pipeline — Branch 1
-# Comprehensive .gitignore for a clean, professional, data‑free repository
+# ERA5 Pollution Risk Pipeline — Branch 2 (Push 1)
+# Clean, professional, data‑free repository
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -29,7 +29,7 @@ env/
 ENV/
 
 # ------------------------------------------------------------------------------
-# 4. Logs, temp, and sample data
+# 4. Logs, temp, and scratch data
 # ------------------------------------------------------------------------------
 data/logs/*
 data/temp/*
@@ -44,14 +44,19 @@ data/raw/**/*.idx
 data/raw/**/*.zip
 
 # ------------------------------------------------------------------------------
-# 6. Intermediate pipeline artifacts
+# 6. Intermediate pipeline artifacts (Stage 2)
 # ------------------------------------------------------------------------------
 data/intermediate/**/*.parquet
 data/features/**/*.parquet
 data/predictions/**/*.parquet
 
 # ------------------------------------------------------------------------------
-# 7. Model artifacts (Branch 1 & future Branch 2)
+# 7. Metadata artifacts (Stage 2)
+# ------------------------------------------------------------------------------
+data/metadata/**/*.json
+
+# ------------------------------------------------------------------------------
+# 8. Model artifacts (future stages)
 # ------------------------------------------------------------------------------
 models/*.pkl
 models/*.joblib
@@ -60,34 +65,33 @@ models/*.onnx
 models/*.h5
 
 # ------------------------------------------------------------------------------
-# 8. MLflow / experiment tracking (Branch 2)
+# 9. MLflow / experiment tracking (Branch 3+)
 # ------------------------------------------------------------------------------
 mlruns/
 mlartifacts/
 
 # ------------------------------------------------------------------------------
-# 9. Docker / container build artifacts
+# 10. Docker / container build artifacts (future)
 # ------------------------------------------------------------------------------
-# (Future Branch 2: containerization)
 *.tar
 *.img
 
 # ------------------------------------------------------------------------------
-# 10. VS Code workspace settings (optional)
+# 11. VS Code workspace settings (optional)
 # ------------------------------------------------------------------------------
 .vscode/
 
 # ------------------------------------------------------------------------------
-# 11. macOS Finder metadata
+# 12. macOS Finder metadata
 # ------------------------------------------------------------------------------
 .DS_Store
 
 # ------------------------------------------------------------------------------
-# 12. Local test files
+# 13. Local test files
 # ------------------------------------------------------------------------------
 test.nc
 
 # ------------------------------------------------------------------------------
-# 13. Keep directory structure clean using .gitkeep
+# 14. Keep directory structure clean using .gitkeep
 # ------------------------------------------------------------------------------
 !.gitkeep

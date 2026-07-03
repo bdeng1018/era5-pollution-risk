@@ -1,32 +1,42 @@
 """
-Inspect a GRIB file using xarray + cfgrib.
+Inspect ERA5 GRIB files (Branch 1 + Branch 2)
 
-Branch 1 functionality:
-    - Open a single-variable GRIB file with xarray
-    - Print basic metadata (dimensions, variables)
-    - Log the action
-    - Return the dataset object for downstream use
+Overview
+--------
+This module provides two inspection paths:
 
-Branch 1 note:
-    Only the single-variable GRIB produced by download_era5_single.py is
-    safe to inspect in Branch 1. Multi-variable monthly GRIBs contain
-    conflicting time coordinates and cannot be loaded by cfgrib.
+1. Branch 1 (single-variable GRIBs)
+    - Safe to open with cfgrib
+    - Produced by download_era5_single.py
+    - Naming convention: <variable_name>_<year>_<month>.grib
+    - Used for early smoke tests and simple pipelines
 
-Branch 2 will add:
-    - schema validation
-    - variable presence checks
-    - metadata extraction
-    - error handling and retries
-    - multi-variable GRIB inspection
+2. Branch 2 (multi-variable monthly GRIBs)
+    - Produced by unzip_grib.py from monthly ZIPs
+    - May contain multiple variables and conflicting time coordinates
+    - Cannot always be opened directly with cfgrib
+    - Requires lightweight metadata extraction instead of full dataset loading
+
+Branch 2 adds:
+    - Multi-variable GRIB inspection
+    - Schema + variable presence checks
+    - Metadata extraction (variables, dims, coords, file size)
+    - Robust error handling
+    - Unified inspection entrypoint for Stage 2 preprocessing
 """
 
-import xarray as xr
 from pathlib import Path
+
+import xarray as xr
 
 from src.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+
+# ------------------------------------------------------------------------------
+# Branch 1: Single-variable GRIB detection
+# ------------------------------------------------------------------------------
 
 def is_single_variable_grib(path: Path) -> bool:
     """
@@ -57,38 +67,175 @@ def is_single_variable_grib(path: Path) -> bool:
     return year.isdigit() and month.isdigit()
 
 
-def inspect_grib(grib_path: Path):
-    """
-    Open and inspect a GRIB file.
+# ------------------------------------------------------------------------------
+# Branch 1: Single-variable GRIB inspection
+# ------------------------------------------------------------------------------
 
-    Parameters
-    ----------
-    grib_path : Path
-        Path to a .grib file
+def inspect_grib_single(grib_path: Path):
+    """
+    Branch 1: Open and inspect a single-variable GRIB file.
 
     Returns
     -------
-    xarray.Dataset
-        The opened dataset
+    xarray.Dataset or None
+        The opened dataset, or None if the file is not single-variable.
     """
 
-    logger.info(f"Inspecting GRIB file: {grib_path}")
-
-    # Branch 1: enforce single-variable rule
     if not is_single_variable_grib(grib_path):
-        logger.warning(f"Skipping non-single-variable GRIB (Branch 1): {grib_path.name}")
+        logger.warning(f"[inspect] Skipping non-single-variable GRIB (Branch 1): {grib_path.name}")
         return None
 
-    # Minimal open
-    ds = xr.open_dataset(grib_path, engine="cfgrib")
+    logger.info(f"[inspect] Opening single-variable GRIB: {grib_path}")
 
-    # Print basic metadata
-    logger.info("GRIB file opened successfully.")
-    logger.info(f"Dimensions: {ds.dims}")
-    logger.info(f"Variables: {list(ds.data_vars)}")
+    try:
+        ds = xr.open_dataset(grib_path, engine="cfgrib")
+    except Exception as e:
+        logger.error(f"[inspect] Failed to open {grib_path}: {e}")
+        return None
+
+    logger.info("[inspect] GRIB opened successfully.")
+    logger.info(f"[inspect] Dimensions: {ds.dims}")
+    logger.info(f"[inspect] Variables: {list(ds.data_vars)}")
 
     return ds
 
+
+# ------------------------------------------------------------------------------
+# Branch 2: Multi-variable GRIB inspection
+# ------------------------------------------------------------------------------
+
+def inspect_grib_multi(grib_path: Path) -> dict:
+    """
+    Branch 2: Inspect multi-variable monthly GRIBs.
+
+    Returns lightweight metadata:
+        - variables
+        - dimensions
+        - coordinates
+        - file size
+        - error (if any)
+
+    Returns
+    -------
+    dict
+        Metadata describing the GRIB file.
+    """
+
+    logger.info(f"[inspect] Inspecting multi-variable GRIB: {grib_path}")
+
+    try:
+        ds = xr.open_dataset(grib_path, engine="cfgrib")
+    except Exception as e:
+        logger.error(f"[inspect] Failed to open multi-variable GRIB {grib_path}: {e}")
+        return {
+            "path": str(grib_path),
+            "error": str(e),
+            "variables": [],
+            "dims": {},
+            "coords": [],
+            "size_bytes": grib_path.stat().st_size,
+        }
+
+    metadata = {
+        "path": str(grib_path),
+        "variables": list(ds.data_vars),
+        "dims": dict(ds.dims),
+        "coords": list(ds.coords),
+        "size_bytes": grib_path.stat().st_size,
+    }
+
+    logger.info(f"[inspect] Variables: {metadata['variables']}")
+    return metadata
+
+
+# ------------------------------------------------------------------------------
+# Unified Branch 2 entrypoint
+# ------------------------------------------------------------------------------
+
+def inspect_all_gribs(raw_dir: Path | str) -> list[dict]:
+    """
+    Inspect ALL GRIB files in a directory (Branch 2 unified entrypoint).
+
+    This function supports BOTH Branch 1 and Branch 2 GRIB formats:
+
+    Branch 1 (single-variable GRIBs)
+    --------------------------------
+    - Naming convention: <variable_name>_<year>_<month>.grib
+    - Safe to open with cfgrib
+    - Used for early smoke tests and simple pipelines
+    - We attempt full dataset loading via inspect_grib_single()
+
+    Branch 2 (multi-variable monthly GRIBs)
+    ---------------------------------------
+    - Naming convention: era5_<year>_<month>.grib
+    - Produced by unzip_grib.py
+    - May contain multiple variables and conflicting time coordinates
+    - Cannot always be opened with cfgrib
+    - We extract lightweight metadata via inspect_grib_multi()
+
+    Stage 2 Contract
+    ----------------
+    - raw_dir may be a STRING (Paths.raw_dir) or a Path object
+    - We MUST convert to Path before filesystem operations
+    - Tests expect returned metadata to contain string paths
+
+    Parameters
+    ----------
+    raw_dir : Path or str
+        Directory containing GRIB files. May come from Paths.raw_dir (string).
+
+    Returns
+    -------
+    list[dict]
+        A list of metadata dictionaries describing each GRIB file.
+        For single-variable GRIBs:
+            {
+                "path": "...",
+                "single_var": True,
+                "opened": True/False
+            }
+        For multi-variable GRIBs:
+            {
+                "path": "...",
+                "variables": [...],
+                "dims": {...},
+                "coords": [...],
+                "size_bytes": int,
+                "error": None or str
+            }
+    """
+
+    # ⭐ Stage 2 contract: raw_dir may be a string → convert to Path
+    raw_dir = Path(raw_dir)
+
+    # Discover all GRIB files
+    grib_files = sorted(raw_dir.glob("*.grib"))
+    logger.info(f"[inspect] Found {len(grib_files)} GRIB files in {raw_dir}")
+
+    results = []
+
+    for grib_path in grib_files:
+
+        # Branch 1 path: single-variable GRIBs
+        if is_single_variable_grib(grib_path):
+            ds = inspect_grib_single(grib_path)
+            results.append({
+                "path": str(grib_path),
+                "single_var": True,
+                "opened": ds is not None,
+            })
+            continue
+
+        # Branch 2 path: multi-variable GRIBs
+        meta = inspect_grib_multi(grib_path)
+        results.append(meta)
+
+    return results
+
+
+# ------------------------------------------------------------------------------
+# CLI (Branch 1 behavior preserved)
+# ------------------------------------------------------------------------------
 
 def main():
     """
@@ -104,7 +251,6 @@ def main():
         logger.error("ERA5 directory not found: data/raw/era5")
         return
 
-    # Find only single-variable GRIBs
     single_var_gribs = sorted(
         p for p in era5_dir.glob("*.grib")
         if is_single_variable_grib(p)
@@ -118,7 +264,7 @@ def main():
 
     for grib_path in single_var_gribs:
         logger.info(f"--- Inspecting {grib_path.name} ---")
-        inspect_grib(grib_path)
+        inspect_grib_single(grib_path)
 
 
 if __name__ == "__main__":

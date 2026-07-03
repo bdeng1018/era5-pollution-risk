@@ -1,15 +1,13 @@
 # ==============================================================================
-# Directory paths used throughout the pipeline.
+# Branch 2 Directory Paths
 # All paths are relative to the project root.
 # ==============================================================================
 
-project_root: .
-
-# RAW DATA — ECMWF downloads + extracted GRIBs + cfgrib .idx
+# RAW DATA — ERA5 GRIB files + metadata
 raw_dir: data/raw/era5
+metadata_dir: data/metadata
 
-# INTERMEDIATE — Branch 1 produces exactly ONE file here:
-#   2m_temperature_2023_09.parquet
+# INTERMEDIATE — GRIB → Parquet conversion outputs
 intermediate_dir: data/intermediate
 
 # LOGS — runtime logs
@@ -23,3 +21,6 @@ model_artifact_dir: models
 
 # PREDICTIONS — model outputs
 predictions_dir: data/predictions
+
+# CONFIGS — Branch 2 config files (variables, years, months)
+config_dir: configs

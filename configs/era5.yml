@@ -1,31 +1,28 @@
 # ==============================================================================
-# ERA5 dataset configuration
-# Defines the product type, data format, grid resolution, and time step.
-# These parameters are passed directly to the Copernicus Data Store API.
+# Branch 2 ERA5 Configuration
+# Defines dataset parameters and references to ingestion config files.
 # ==============================================================================
 
-era5:
+dataset:
   product_type: reanalysis
   format: grib
   grid: 0.25
-  time: "00:00"
+  timestep: hourly
 
-# ==============================================================================
-# Configuration file references for ERA5 ingestion
-# These point to other YAML files containing lists of variables, years, months,
-# region bounding box, and directory paths.
-#
-# Branch 1 uses these configs to drive:
-#   - monthly ERA5 downloads
-#   - variable selection
-#   - year/month loops
-#   - region bounding box
-#   - directory structure
-# ==============================================================================
-
-configs:
+ingestion:
   variables: configs/variables.yml
   years: configs/years.yml
   months: configs/months.yml
   region: configs/region.yml
-  paths: configs/paths.yml
+
+paths:
+  config: configs/paths.yml
+
+metadata:
+  enabled: true
+  format: json
+
+environment:
+  require_cdsapi_credentials: true
+  require_cfgrib: false
+  require_eccodes: false

@@ -1,7 +1,5 @@
 """
-Branch 2: Single-Variable ERA5 Downloader
------------------------------------------
-
+Branch 2: Monthly ERA5 Downloader
 Used by Stage 1 tests. Must remain stable and monkeypatch-friendly.
 """
 
@@ -11,23 +9,23 @@ import time
 from pathlib import Path
 from typing import Optional
 
-import cdsapi  # required for monkeypatching
+import cdsapi
 
-from src.utils.config import load_variables
+from src.utils.config import load_months, load_variables, load_years
 from src.utils.logging import get_logger
 from src.utils.paths import Paths
 
 logger = get_logger(__name__)
 
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Module-level client (required for monkeypatching)
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 client = cdsapi.Client()
 
 
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Directory validation (required by Stage 1 tests)
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 
 def validate_directories() -> None:
     paths = Paths()
@@ -35,9 +33,9 @@ def validate_directories() -> None:
         Path(d).mkdir(parents=True, exist_ok=True)
 
 
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Environment validation
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 
 def validate_environment() -> None:
     validate_directories()
@@ -46,9 +44,9 @@ def validate_environment() -> None:
         raise EnvironmentError("Missing CDS credentials")
 
 
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Config validation
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 
 def validate_config() -> bool:
     paths = Paths()
@@ -65,9 +63,9 @@ def validate_config() -> bool:
         return False
 
 
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Retry wrapper
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 
 def download_with_retry(request: dict, outfile: Path) -> Optional[Path]:
     max_attempts = 3
@@ -87,24 +85,26 @@ def download_with_retry(request: dict, outfile: Path) -> Optional[Path]:
     return None
 
 
-# ------------------------------------------------------------------------------
-# Single-variable download
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Monthly download
+# ---------------------------------------------------------------------
 
-def download_variable(variable: str, year: str, month: str) -> Optional[Path]:
-    logger.info(f"[stage1] Branch 2 download start: {variable} {year}-{month}")
+def download_month(year: str, month: str) -> Optional[Path]:
+    logger.info(f"[stage1] Branch 2 monthly download start: {year}-{month}")
 
     validate_environment()
     validate_directories()
     config_ok = validate_config()
 
     paths = Paths()
-    outfile = Path(paths.raw_dir) / f"{variable}_{year}_{month}.grib"
+    variables = load_variables()
+
+    outfile = Path(paths.raw_dir) / f"era5_{year}_{month}.zip"
 
     request = {
         "product_type": "reanalysis",
-        "format": "grib",
-        "variable": variable,
+        "format": "zip",
+        "variable": variables,
         "year": year,
         "month": month,
         "day": [f"{d:02d}" for d in range(1, 32)],
@@ -113,11 +113,10 @@ def download_variable(variable: str, year: str, month: str) -> Optional[Path]:
 
     result = download_with_retry(request, outfile)
 
-    metadata_path = Path(paths.metadata_dir) / f"metadata_{variable}_{year}_{month}.json"
+    metadata_path = Path(paths.metadata_dir) / f"metadata_{year}_{month}.json"
     metadata_path.write_text(
         json.dumps(
             {
-                "variable": variable,
                 "year": year,
                 "month": month,
                 "success": result is not None,
@@ -129,14 +128,17 @@ def download_variable(variable: str, year: str, month: str) -> Optional[Path]:
     return result
 
 
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # CLI entrypoint
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 
 def main():
-    variables = load_variables()
-    for variable in variables:
-        download_variable(variable, "2023", "01")
+    years = load_years()
+    months = load_months()
+
+    for year in years:
+        for month in months:
+            download_month(year, month)
 
 
 if __name__ == "__main__":
