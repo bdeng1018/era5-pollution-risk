@@ -1,26 +1,33 @@
 # ==============================================================================
-# Branch 2 Directory Paths
-# All paths are relative to the project root.
+# Branch 2 Directory Paths (canonical)
 # ==============================================================================
 
 # RAW DATA — ERA5 GRIB files + metadata
 raw_dir: data/raw/era5
 metadata_dir: data/metadata
 
-# INTERMEDIATE — GRIB → Parquet conversion outputs
+# INTERMEDIATE — GRIB → Parquet conversion outputs (Stage 2)
 intermediate_dir: data/intermediate
 
 # LOGS — runtime logs
 logs_dir: data/logs
 
-# FEATURES — ML-ready features
+# FEATURES — ML-ready features (Stage 4)
 features_dir: data/features
 
-# MODEL ARTIFACTS — trained model files
+# MODEL ARTIFACTS — trained model files (Stage 6)
 model_artifact_dir: models
 
-# PREDICTIONS — model outputs
+# PREDICTIONS — model outputs (Stage 7)
 predictions_dir: data/predictions
 
 # CONFIGS — Branch 2 config files (variables, years, months)
 config_dir: configs
+
+# ==============================================================================
+# Stage 3 Chunk Outputs (Branch 2)
+# ==============================================================================
+chunk_output_dir: data/chunks
+
+# Stage 3 Metadata (per-chunk JSON)
+chunk_metadata_dir: data/chunks_metadata

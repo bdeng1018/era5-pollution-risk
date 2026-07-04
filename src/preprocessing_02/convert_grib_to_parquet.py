@@ -1,39 +1,100 @@
 """
-Convert ERA5 GRIB files to Parquet (Branch 1 + Branch 2)
+Convert ERA5 GRIB files to HOURLY Parquet (Branch 1 + Branch 2)
+===============================================================
 
-Overview
---------
-This module provides two conversion paths:
+This Stage 2 module now produces HOURLY Parquet files and HOURLY timestamps.
 
-1. Branch 1 (single-variable GRIBs)
-    - Safe to open with cfgrib
-    - Produced by download_era5_single.py
-    - Naming convention: <variable_name>_<year>_<month>.grib
-    - Converts to a single Parquet file
+Returned metadata format:
 
-2. Branch 2 (multi-variable monthly GRIBs)
-    - Produced by unzip_grib.py from monthly ZIPs
-    - May contain multiple variables and multiple time coordinates
-    - Requires robust opening, metadata extraction, and safe conversion
-    - Converts each GRIB into a Parquet file in intermediate_dir
+{
+    "grib_path": "...",
+    "variables": {
+        "<var>": {
+            "YYYY-MM-DDTHH:MM": "/path/to/file.parquet",
+            ...
+        }
+    },
+    "timestamps": [...]
+}
 
-Branch 2 adds:
-    - Multi-variable GRIB conversion
-    - Schema validation
-    - Metadata extraction
-    - Error handling + retries (handled by Stage 2 orchestrator)
-    - Unified conversion entrypoint for Stage 2 preprocessing
+This is the required Stage 2 → Stage 3 contract.
 """
 
 from pathlib import Path
 
+import cfgrib
 import pandas as pd
 import xarray as xr
 
+from src.download_01.paths import Paths
 from src.utils.logging import get_logger
-from src.utils.paths import Paths
 
 logger = get_logger(__name__)
+
+
+# ------------------------------------------------------------------------------
+# Filename → ERA5 shortName mapping (21 variables)
+# ------------------------------------------------------------------------------
+
+FILENAME_TO_SHORTNAME = {
+    "10m_u_component_of_wind": "u10",
+    "10m_v_component_of_wind": "v10",
+
+    "2m_dewpoint_temperature": "d2m",
+    "2m_temperature": "t2m",
+
+    "mean_sea_level_pressure": "msl",
+    "surface_pressure": "sp",
+
+    "total_precipitation": "tp",
+
+    "surface_latent_heat_flux": "slhf",
+    "surface_net_solar_radiation": "ssr",
+    "surface_net_thermal_radiation": "str",
+    "surface_sensible_heat_flux": "sshf",
+
+    "surface_solar_radiation_downward_clear_sky": "ssrc",
+    "surface_solar_radiation_downwards": "ssrd",
+
+    "total_cloud_cover": "tcc",
+    "evaporation": "e",
+
+    "boundary_layer_height": "blh",
+    "convective_available_potential_energy": "cape",
+    "convective_inhibition": "cin",
+
+    "land_sea_mask": "lsm",
+    "total_column_ozone": "tco3",
+    "total_column_water_vapour": "tcwv",
+}
+
+
+# ------------------------------------------------------------------------------
+# Known ERA5 shortNames for Branch 2 probing
+# ------------------------------------------------------------------------------
+
+KNOWN_ERA5_VARS = list(FILENAME_TO_SHORTNAME.values())
+
+
+def list_grib_variables(grib_path: Path) -> list[str]:
+    """
+    Discover variables by probing known ERA5 shortNames.
+    Works even in minimal cfgrib/eccodes installations.
+    """
+    vars = []
+
+    for var in KNOWN_ERA5_VARS:
+        try:
+            ds = xr.open_dataset(
+                grib_path,
+                engine="cfgrib",
+                filter_by_keys={"shortName": var},
+            )
+            vars.append(var)
+        except Exception:
+            continue
+
+    return vars
 
 
 # ------------------------------------------------------------------------------
@@ -42,147 +103,150 @@ logger = get_logger(__name__)
 
 def is_single_variable_grib(path: Path) -> bool:
     """
-    Determine whether a GRIB file follows the Branch 1 single-variable naming convention.
+    True single-variable GRIBs follow:
+        <long_variable_name>_<year>_<month>.grib
 
-    A valid single-variable GRIB ends with:
-        variable_name_<year>_<month>.grib
-
-    Where:
-        - variable_name may contain underscores
-        - year and month are the last two underscore-separated parts
-        - year and month must be numeric
+    Multi-variable GRIBs follow:
+        era5_<year>_<month>.grib
     """
-
     parts = path.stem.split("_")
     if len(parts) < 3:
         return False
 
+    # Multi-variable GRIBs always start with "era5"
+    if parts[0] == "era5":
+        return False
+
     year = parts[-2]
     month = parts[-1]
-
     return year.isdigit() and month.isdigit()
 
 
 # ------------------------------------------------------------------------------
-# Branch 1: Single-variable conversion
+# Shared hourly conversion logic
 # ------------------------------------------------------------------------------
 
-def convert_single_variable(grib_path: Path, intermediate_dir: Path) -> Path:
+def _convert_hourly(ds: xr.Dataset, grib_path: Path, intermediate_dir: Path, var: str) -> dict:
     """
-    Branch 1: Convert a single-variable GRIB to Parquet.
-    """
-
-    logger.info(f"[convert] Single-variable GRIB → Parquet: {grib_path}")
-
-    ds = xr.open_dataset(grib_path, engine="cfgrib")
-    df = ds.to_dataframe().reset_index()
-
-    parquet_path = intermediate_dir / f"{grib_path.stem}.parquet"
-    df.to_parquet(parquet_path, index=False)
-
-    logger.info(f"[convert] Saved Parquet → {parquet_path}")
-    logger.info(f"[convert] Rows: {len(df)}, Columns: {len(df.columns)}")
-
-    return parquet_path
-
-
-# ------------------------------------------------------------------------------
-# Branch 2: Multi-variable conversion
-# ------------------------------------------------------------------------------
-
-def convert_multi_variable(grib_path: Path, intermediate_dir: Path) -> Path:
-    """
-    Branch 2: Convert a multi-variable GRIB to Parquet.
-
-    Returns
-    -------
-    Path
-        Path to the saved Parquet file.
+    Convert an xarray Dataset into HOURLY Parquet files for a single variable.
     """
 
-    logger.info(f"[convert] Multi-variable GRIB → Parquet: {grib_path}")
+    if "time" not in ds.coords:
+        raise ValueError(f"[convert] Variable {var} has no time coordinate in {grib_path}")
 
-    try:
-        ds = xr.open_dataset(grib_path, engine="cfgrib")
-    except Exception as e:
-        logger.error(f"[convert] Failed to open multi-variable GRIB {grib_path}: {e}")
-        raise
+    hourly_metadata = {
+        "timestamps": [],
+        "parquet_files": {}
+    }
 
-    # Convert to DataFrame
-    try:
-        df = ds.to_dataframe().reset_index()
-    except Exception as e:
-        logger.error(f"[convert] Failed to convert GRIB to DataFrame {grib_path}: {e}")
-        raise
+    for t in ds.time.values:
+        ts = pd.to_datetime(t).strftime("%Y-%m-%dT%H:%M")
 
-    parquet_path = intermediate_dir / f"{grib_path.stem}.parquet"
+        hourly_ds = ds.sel(time=t)
+        df = hourly_ds.to_dataframe().reset_index()
 
-    try:
+        parquet_name = f"{grib_path.stem}_{var}_{ts}.parquet"
+        parquet_path = intermediate_dir / parquet_name
+
         df.to_parquet(parquet_path, index=False)
+
+        hourly_metadata["timestamps"].append(ts)
+        hourly_metadata["parquet_files"][ts] = str(parquet_path)
+
+    logger.info(
+        f"[convert] Wrote {len(hourly_metadata['timestamps'])} hourly Parquet files "
+        f"for variable {var} in {grib_path.name}"
+    )
+
+    return hourly_metadata
+
+
+# ------------------------------------------------------------------------------
+# Branch 1: Single-variable conversion (now hourly)
+# ------------------------------------------------------------------------------
+
+def convert_single_variable(grib_path: Path, intermediate_dir: Path) -> dict:
+    logger.info(f"[convert] Single-variable GRIB → hourly Parquet: {grib_path}")
+
+    parts = grib_path.stem.split("_")
+    filename_var = "_".join(parts[:-2])
+
+    # Map filename → ERA5 shortName
+    variable = FILENAME_TO_SHORTNAME.get(filename_var, filename_var)
+
+    try:
+        ds = xr.open_dataset(
+            grib_path,
+            engine="cfgrib",
+            filter_by_keys={"shortName": variable}
+        )
     except Exception as e:
-        logger.error(f"[convert] Failed to write Parquet {parquet_path}: {e}")
+        logger.error(f"[convert] Failed to open single-variable GRIB {grib_path}: {e}")
         raise
 
-    logger.info(f"[convert] Saved Parquet → {parquet_path}")
-    logger.info(f"[convert] Rows: {len(df)}, Columns: {len(df.columns)}")
+    hourly_meta = _convert_hourly(ds, grib_path, intermediate_dir, variable)
 
-    return parquet_path
+    return {
+        "grib_path": str(grib_path),
+        "variables": {variable: hourly_meta["parquet_files"]},
+        "timestamps": hourly_meta["timestamps"],
+    }
 
 
 # ------------------------------------------------------------------------------
-# Unified Branch 2 entrypoint
+# Branch 2: Multi-variable conversion (now hourly)
 # ------------------------------------------------------------------------------
 
-def convert_grib_to_parquet(grib_path: Path) -> Path | None:
-    """
-    Unified GRIB → Parquet conversion entrypoint (Branch 2).
+def convert_multi_variable(grib_path: Path, intermediate_dir: Path) -> dict:
+    logger.info(f"[convert] Multi-variable GRIB → hourly Parquet: {grib_path}")
 
-    Supports BOTH Branch 1 and Branch 2 GRIB formats:
+    variables = list_grib_variables(grib_path)
+    logger.info(f"[convert] Variables found: {variables}")
 
-    Branch 1 (single-variable GRIBs)
-    --------------------------------
-    - Naming convention: <variable_name>_<year>_<month>.grib
-    - Safe to open with cfgrib
-    - Converts directly to a single Parquet file
-    - Used for early smoke tests and simple pipelines
+    multi_meta = {
+        "grib_path": str(grib_path),
+        "variables": {},
+        "timestamps": set(),
+    }
 
-    Branch 2 (multi-variable monthly GRIBs)
-    ---------------------------------------
-    - Naming convention: era5_<year>_<month>.grib
-    - Produced by unzip_grib.py
-    - May contain multiple variables and conflicting time coordinates
-    - Requires robust opening + safe conversion
-    - Converts to Parquet in intermediate_dir
+    for var in variables:
+        try:
+            ds = xr.open_dataset(
+                grib_path,
+                engine="cfgrib",
+                filter_by_keys={"shortName": var},
+            )
+        except Exception as e:
+            logger.warning(f"[convert] Skipping variable {var}: {e}")
+            continue
 
-    Stage 2 Contract
-    ----------------
-    - Paths.intermediate_dir is a STRING (required by tests)
-    - We MUST convert it to Path before filesystem operations
-    - Directory creation happens here (not in Paths.__init__)
+        if "time" not in ds.coords:
+            logger.warning(f"[convert] Variable {var} has no time coordinate, skipping")
+            continue
 
-    Parameters
-    ----------
-    grib_path : Path
-        Path to the GRIB file to convert.
+        hourly_meta = _convert_hourly(ds, grib_path, intermediate_dir, var)
 
-    Returns
-    -------
-    Path or None
-        Path to the saved Parquet file, or None if skipped.
-    """
+        multi_meta["variables"][var] = hourly_meta["parquet_files"]
+        multi_meta["timestamps"].update(hourly_meta["timestamps"])
 
-    logger.info(f"[convert] Converting GRIB → Parquet: {grib_path}")
+    multi_meta["timestamps"] = sorted(multi_meta["timestamps"])
+    return multi_meta
 
-    # ⭐ Stage 2 contract: Paths attributes are strings → convert to Path
+
+# ------------------------------------------------------------------------------
+# Unified Stage 2 entrypoint
+# ------------------------------------------------------------------------------
+
+def convert_grib_to_parquet(grib_path: Path) -> dict | None:
+    logger.info(f"[convert] Converting GRIB → hourly Parquet: {grib_path}")
+
     paths = Paths()
     intermediate_dir = Path(paths.intermediate_dir)
     intermediate_dir.mkdir(parents=True, exist_ok=True)
 
-    # Branch 1 path: single-variable GRIBs
     if is_single_variable_grib(grib_path):
         return convert_single_variable(grib_path, intermediate_dir)
 
-    # Branch 2 path: multi-variable GRIBs
     return convert_multi_variable(grib_path, intermediate_dir)
 
 
@@ -191,10 +255,6 @@ def convert_grib_to_parquet(grib_path: Path) -> Path | None:
 # ------------------------------------------------------------------------------
 
 def main():
-    """
-    Branch 1 CLI: convert only single-variable GRIBs.
-    """
-
     paths = Paths()
     era5_dir = Path(paths.raw_dir)
 

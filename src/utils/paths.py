@@ -39,9 +39,10 @@ class Paths:
         self.features_dir = str(root / cfg["features_dir"])
         self.model_artifact_dir = str(root / cfg["model_artifact_dir"])
         self.predictions_dir = str(root / cfg["predictions_dir"])
-
-        # REQUIRED BY TESTS — MUST EXIST
         self.config_dir = str(root / cfg["config_dir"])
+        self.chunk_output_dir = str(root / cfg["chunk_output_dir"])
+        self.chunk_metadata_dir = str(root / cfg["chunk_metadata_dir"])
+
 
     def __repr__(self):
         return (
@@ -53,6 +54,8 @@ class Paths:
             f"  features_dir={self.features_dir},\n"
             f"  model_artifact_dir={self.model_artifact_dir},\n"
             f"  predictions_dir={self.predictions_dir},\n"
-            f"  config_dir={self.config_dir}\n"
+            f"  config_dir={self.config_dir},\n"
+            f"  chunk_output_dir={self.chunk_output_dir},\n"
+            f"  chunk_metadata_dir={self.chunk_metadata_dir}\n"
             ")"
         )

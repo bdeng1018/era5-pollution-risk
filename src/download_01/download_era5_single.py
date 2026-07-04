@@ -13,24 +13,23 @@ from typing import Optional
 
 import cdsapi  # required for monkeypatching
 
+from src.download_01.paths import Paths
 from src.utils.config import load_variables
 from src.utils.logging import get_logger
-from src.utils.paths import Paths
 
 logger = get_logger(__name__)
 
 # ------------------------------------------------------------------------------
-# Module-level client (required for monkeypatching)
+# Module-level client (required by Stage 1 monkeypatching)
 # ------------------------------------------------------------------------------
 client = cdsapi.Client()
 
 
 # ------------------------------------------------------------------------------
-# Directory validation (required by Stage 1 tests)
+# Directory validation (Stage 1 requires passing paths explicitly)
 # ------------------------------------------------------------------------------
 
-def validate_directories() -> None:
-    paths = Paths()
+def validate_directories(paths: Paths) -> None:
     for d in [paths.raw_dir, paths.metadata_dir, paths.config_dir]:
         Path(d).mkdir(parents=True, exist_ok=True)
 
@@ -39,8 +38,8 @@ def validate_directories() -> None:
 # Environment validation
 # ------------------------------------------------------------------------------
 
-def validate_environment() -> None:
-    validate_directories()
+def validate_environment(paths: Paths) -> None:
+    validate_directories(paths)
 
     if "CDSAPI_URL" not in os.environ or "CDSAPI_KEY" not in os.environ:
         raise EnvironmentError("Missing CDS credentials")
@@ -50,8 +49,7 @@ def validate_environment() -> None:
 # Config validation
 # ------------------------------------------------------------------------------
 
-def validate_config() -> bool:
-    paths = Paths()
+def validate_config(paths: Paths) -> bool:
     config_file = Path(paths.config_dir) / "config.json"
 
     if not config_file.exists():
@@ -94,11 +92,13 @@ def download_with_retry(request: dict, outfile: Path) -> Optional[Path]:
 def download_variable(variable: str, year: str, month: str) -> Optional[Path]:
     logger.info(f"[stage1] Branch 2 download start: {variable} {year}-{month}")
 
-    validate_environment()
-    validate_directories()
-    config_ok = validate_config()
-
+    # Monkeypatch-friendly: Paths() is replaced in tests
     paths = Paths()
+
+    validate_environment(paths)
+    validate_directories(paths)
+    config_ok = validate_config(paths)
+
     outfile = Path(paths.raw_dir) / f"{variable}_{year}_{month}.grib"
 
     request = {

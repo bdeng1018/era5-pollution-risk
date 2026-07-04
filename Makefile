@@ -27,10 +27,11 @@
 #   ✓ Stage 1 test suite complete
 #   ✓ Stage 2 unzip/inspect/convert modules complete
 #   ✓ Stage 2 test suite complete
-#   → Stage 2 orchestration via run_preprocessing.py
+#   ✓ Stage 3 chunked core processing modules complete
+#   → Stage 3 orchestration via ChunkOrchestrator
 # ==============================================================================
 
-.PHONY: env download preprocess features train evaluate test all clean-cache clean-pyc
+.PHONY: env download preprocess core features train evaluate test all clean-cache clean-pyc
 
 # ------------------------------------------------------------------------------
 # Stage 00 — Environment validation
@@ -51,19 +52,25 @@ preprocess: download
 	python -m src.preprocessing_02.run_preprocessing --config configs/config.yml
 
 # ------------------------------------------------------------------------------
-# Stage 03 — Feature Engineering (Branch 1 baseline)
+# Stage 03 — Chunked Core Processing (Branch 2)
 # ------------------------------------------------------------------------------
-features: preprocess
+core: preprocess
+	python -m src.core_03.chunk_orchestrator --config configs/config.yml
+
+# ------------------------------------------------------------------------------
+# Stage 04 — Feature Engineering (Branch 1 baseline)
+# ------------------------------------------------------------------------------
+features: core
 	python -m src.features_03.build_features
 
 # ------------------------------------------------------------------------------
-# Stage 04 — Modeling (Branch 1 baseline)
+# Stage 05 — Modeling (Branch 1 baseline)
 # ------------------------------------------------------------------------------
 train: features
 	python -m src.modeling_04.train_model
 
 # ------------------------------------------------------------------------------
-# Stage 05 — Evaluation (Branch 1 baseline)
+# Stage 06 — Evaluation (Branch 1 baseline)
 # ------------------------------------------------------------------------------
 evaluate: train
 	python -m src.evaluation_05.evaluate_model
@@ -75,13 +82,17 @@ test:
 	pytest -q
 
 # ------------------------------------------------------------------------------
-# Branch 1: Full pipeline (Stages 01 → 05)
-# Branch 2: Stages 01 → 02
+# Full pipeline (Stages 01 → 06)
 # ------------------------------------------------------------------------------
-all: download preprocess features train evaluate
+all: download preprocess core features train evaluate
+
+# ------------------------------------------------------------------------------
+# Branch 2 only (Stages 01 → 03)
+# ------------------------------------------------------------------------------
 branch2:
 	make download
 	make preprocess
+	make core
 
 # ------------------------------------------------------------------------------
 # Clean Python caches (pyc + __pycache__ + pytest cache)

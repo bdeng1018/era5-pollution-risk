@@ -4,30 +4,73 @@
 # ==============================================================================
 
 era5:
-  # ERA5 ingestion configuration (single-variable + monthly)
   variables: configs/variables.yml
   years: configs/years.yml
   months: configs/months.yml
   region: configs/region.yml
 
 paths:
-  # Directory structure for raw data, metadata, intermediate files, logs, etc.
-  config: configs/paths.yml
+  raw_dir: data/raw/era5
+  metadata_dir: data/metadata
+  intermediate_dir: data/intermediate
+  logs_dir: data/logs
+  features_dir: data/features
+  model_artifact_dir: models
+  predictions_dir: data/predictions
+  config_dir: configs
+
+  chunk_output_dir: data/chunks
+  chunk_metadata_dir: data/chunks_metadata
 
 metadata:
-  # Metadata schema for Branch 2 ingestion
   enabled: true
   format: json
 
 environment:
-  # Environment validation requirements (Branch 2)
   require_cdsapi_credentials: true
   require_cfgrib: false
   require_eccodes: false
 
 model:
-  # Model configuration (not used in Branch 2 ingestion, kept for pipeline completeness)
   target: t2m
   artifact_dir: models
   features_dir: data/features
   predictions_dir: data/predictions
+
+# ------------------------------------------------------------------------------
+# Stage 3 — Chunked Core Processing (required)
+# ------------------------------------------------------------------------------
+
+stage3:
+  variables:
+    - t2m
+    - d2m
+    - u10
+    - v10
+    - msl
+    - sp
+    - tp
+    - slhf
+    - ssr
+    - str
+    - sshf
+    - ssrc
+    - ssrd
+    - tcc
+    - e
+    - blh
+    - cape
+    - cin
+    - lsm
+    - tco3
+    - tcwv
+
+  chunk:
+    size:
+      time: 168 # 7 days × 24 hours
+    stride:
+      time: 168 # non-overlapping chunks
+
+  output:
+    chunk_output_dir: data/chunks
+    chunk_metadata_dir: data/chunks_metadata
