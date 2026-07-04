@@ -29,6 +29,7 @@ from pathlib import Path
 
 import xarray as xr
 
+from src.download_01.paths import Paths  # ⭐ FIXED: Stage 1/2-safe Paths
 from src.utils.logging import get_logger
 
 logger = get_logger(__name__)

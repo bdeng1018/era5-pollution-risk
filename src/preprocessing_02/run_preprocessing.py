@@ -2,32 +2,40 @@
 Stage 2 Preprocessing Orchestrator (Parallelized)
 =================================================
 
-This module runs the full Stage 2 preprocessing pipeline:
+Builds HOURLY master metadata.json:
 
-    1. Unzip monthly ERA5 ZIP files
-    2. Inspect all GRIB files
-    3. Convert GRIB → Parquet (parallelized)
-
-This is the single entrypoint for Stage 2 and prepares data for
-Stage 3 parallelization and Stage 4 merging.
+{
+    "variables": {
+        "<shortName>": {
+            "YYYY-MM-DDTHH:MM": "/path/to/parquet",
+            ...
+        },
+        ...
+    },
+    "timestamps": [
+        "YYYY-MM-DDTHH:MM",
+        ...
+    ]
+}
 """
 
+import json
 import logging
 import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
+from src.download_01.paths import Paths
 from src.preprocessing_02.convert_grib_to_parquet import convert_grib_to_parquet
 from src.preprocessing_02.inspect_grib import inspect_all_gribs
 from src.preprocessing_02.unzip_grib import unzip_all_months
 from src.utils.logging import get_logger
-from src.utils.paths import Paths
 
 logger = get_logger(__name__)
 
 
 # ------------------------------------------------------------------------------
-# Stage 2 logging configuration
+# Logging setup
 # ------------------------------------------------------------------------------
 
 paths = Paths()
@@ -45,7 +53,7 @@ root_logger.setLevel(logging.INFO)
 
 
 # ------------------------------------------------------------------------------
-# Step 1: Unzip
+# Step 1: Unzip monthly ZIP files
 # ------------------------------------------------------------------------------
 
 def step_unzip() -> list[Path]:
@@ -56,7 +64,7 @@ def step_unzip() -> list[Path]:
 
 
 # ------------------------------------------------------------------------------
-# Step 2: Inspect
+# Step 2: Inspect GRIB files
 # ------------------------------------------------------------------------------
 
 def step_inspect() -> list[dict]:
@@ -72,13 +80,10 @@ def step_inspect() -> list[dict]:
 
 
 # ------------------------------------------------------------------------------
-# Step 3: Convert (Parallel)
+# Step 3: Convert GRIB → Parquet (parallel)
 # ------------------------------------------------------------------------------
 
 def step_convert_parallel() -> list[dict]:
-    """
-    Convert all GRIB files to Parquet using multi-process parallelism.
-    """
     logger.info("[stage2] Step 3: Converting GRIB → Parquet (parallel)")
 
     paths = Paths()
@@ -105,13 +110,21 @@ def step_convert_parallel() -> list[dict]:
         for future in as_completed(futures):
             grib_path = futures[future]
             try:
-                parquet_path = future.result()
+                meta = future.result()
+                if meta is None:
+                    raise ValueError("convert_grib_to_parquet returned None")
+
                 results.append({
                     "path": str(grib_path),
                     "success": True,
-                    "output": str(parquet_path) if parquet_path else None,
+                    "output": meta,
                 })
-                logger.info(f"[stage2] OK → {grib_path} → {parquet_path}")
+
+                logger.info(
+                    f"[stage2] OK → {grib_path} "
+                    f"→ {len(meta['timestamps'])} hourly timestamps"
+                )
+
             except Exception as e:
                 logger.error(f"[stage2] FAILED → {grib_path}: {e}")
                 results.append({
@@ -125,7 +138,61 @@ def step_convert_parallel() -> list[dict]:
 
 
 # ------------------------------------------------------------------------------
-# Unified Stage 2 pipeline
+# Step 4: Build HOURLY master metadata.json
+# ------------------------------------------------------------------------------
+
+def build_master_metadata(results: list[dict]) -> Path:
+    """
+    Build HOURLY master metadata.json directly from conversion results.
+
+    New Stage 2 metadata format:
+
+    {
+        "grib_path": "...",
+        "variables": {
+            "<shortName>": { ts: parquet_path }
+        },
+        "timestamps": [...]
+    }
+    """
+
+    paths = Paths()
+    metadata_dir = Path(paths.metadata_dir)
+    metadata_dir.mkdir(parents=True, exist_ok=True)
+
+    master = {
+        "variables": {},
+        "timestamps": set(),
+    }
+
+    for r in results:
+        if not r["success"]:
+            continue
+
+        meta = r["output"]
+
+        # Merge per-variable parquet paths
+        for var, parquet_map in meta["variables"].items():
+            if var not in master["variables"]:
+                master["variables"][var] = {}
+
+            for ts, parquet_path in parquet_map.items():
+                master["variables"][var][ts] = parquet_path
+                master["timestamps"].add(ts)
+
+    # Convert timestamps set → sorted list
+    master["timestamps"] = sorted(master["timestamps"])
+
+    master_path = metadata_dir / "metadata.json"
+    with open(master_path, "w") as f:
+        json.dump(master, f, indent=2)
+
+    logger.info(f"[stage2] Wrote master metadata → {master_path}")
+    return master_path
+
+
+# ------------------------------------------------------------------------------
+# Main pipeline
 # ------------------------------------------------------------------------------
 
 def run_preprocessing():
@@ -135,12 +202,10 @@ def run_preprocessing():
     metadata = step_inspect()
     results = step_convert_parallel()
 
-    logger.info("========== Stage 2 Preprocessing Complete ==========")
+    master_path = build_master_metadata(results)
 
+    logger.info(f"========== Stage 2 Preprocessing Complete → {master_path} ==========")
 
-# ------------------------------------------------------------------------------
-# CLI entrypoint
-# ------------------------------------------------------------------------------
 
 def main():
     try:

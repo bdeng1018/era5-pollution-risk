@@ -1,21 +1,21 @@
 """
-Environment validation utilities for the ERA5 pipeline.
+Environment validation utilities for the ERA5 pipeline (Branch 2).
 
 This module performs lightweight, fail‑fast checks to ensure the runtime
-environment is correctly configured for Branch 1:
+environment is correctly configured for ingestion and preprocessing:
 
 - Python version (3.10+ required for cfgrib/eccodes compatibility)
 - Required packages (xarray, cfgrib, pyarrow, pandas, numpy)
-- Required directories (data/raw/era5, configs)
+- Minimal directory checks (configs/, raw/)
 
-These checks are intentionally minimal for Branch 1. Additional validation
+Branch 2 intentionally keeps environment validation minimal. Heavy validation
 (e.g., GRIB schema checks, parquet integrity checks, extended directory
-structure) will be introduced in later branches once the pipeline expands.
+structure) is handled inside Stage 2 modules, not here.
 """
 
-import importlib
 import logging
 import sys
+from importlib.util import find_spec
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ def check_package(pkg: str):
     ImportError
         If the package cannot be found.
     """
-    if importlib.util.find_spec(pkg) is None:
+    if find_spec(pkg) is None:
         raise ImportError(f"Required package not installed: {pkg}")
 
 
