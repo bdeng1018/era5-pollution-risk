@@ -1,47 +1,133 @@
 # ==============================================================================
-# Branch 2 Configuration
-# Modular configuration for ERA5 ingestion, preprocessing, and pipeline structure.
+# ERA5 Pollution‑Risk Pipeline — Branch 2 (Stages 1–4)
+# ==============================================================================
+# This configuration drives the full pipeline:
+#
+#   Stage 1 — Raw GRIB ingestion
+#       • download ERA5 GRIB files
+#       • convert GRIB → hourly parquet
+#       • preserve all variables
+#
+#   Stage 2 — Variable‑split parquet + metadata.json
+#       • one parquet per (variable, timestamp)
+#       • metadata.json with flat keys: "<timestamp>::<variable>"
+#
+#   Stage 3 — Single‑variable chunk engine (Branch‑2)
+#       • one chunk per (variable, window_start)
+#       • schema: time, lat, lon, <variable>
+#       • dynamic schema injection per variable
+#       • merged.nc + metadata + QC
+#
+#   Stage 4 — Tensor construction + pollution‑risk dataset
+#       • consumes merged.nc
+#       • builds spatiotemporal tensors
+#       • writes Stage‑4 dataset + diagnostics
+#
 # ==============================================================================
 
-era5:
-  variables: configs/variables.yml
-  years: configs/years.yml
-  months: configs/months.yml
-  region: configs/region.yml
-
-paths:
-  raw_dir: data/raw/era5
-  metadata_dir: data/metadata
-  intermediate_dir: data/intermediate
-  logs_dir: data/logs
-  features_dir: data/features
-  model_artifact_dir: models
-  predictions_dir: data/predictions
-  config_dir: configs
-
-  chunk_output_dir: data/chunks
-  chunk_metadata_dir: data/chunks_metadata
-
-metadata:
-  enabled: true
-  format: json
-
+# ==============================================================================
+# Environment
+# ==============================================================================
 environment:
   require_cdsapi_credentials: true
   require_cfgrib: false
   require_eccodes: false
 
-model:
-  target: t2m
-  artifact_dir: models
-  features_dir: data/features
-  predictions_dir: data/predictions
+# ==============================================================================
+# PATHS
+# ==============================================================================
 
-# ------------------------------------------------------------------------------
-# Stage 3 — Chunked Core Processing (required)
-# ------------------------------------------------------------------------------
+paths:
+  # Stage‑1 raw GRIB directory
+  raw_dir: data/raw/era5
+
+  # Stage‑1 → Stage‑2 intermediate parquet directory
+  intermediate_dir: data/intermediate
+
+  # Stage‑2 metadata.json directory
+  metadata_dir: data/metadata
+
+  # Stage‑3 chunk output directory
+  chunk_output_dir: data/chunks
+
+  # Stage‑3 chunk metadata directory
+  stage3_output:
+    chunk_metadata_dir: data/chunks_metadata
+
+  # Stage‑3 merged outputs
+  stage3_merged: data/intermediate/merged.nc
+  stage3_metadata: data/intermediate/merged_metadata.json
+  stage3_qc: data/intermediate/merged_qc.json
+
+  # Stage‑4 output directory
+  stage4_output_dir: data/spatiotemporal
+
+  # Stage-4 outputs
+  stage4_dataset: data/spatiotemporal/stage4_tensor.nc
+  stage4_qc: data/spatiotemporal/stage4_qc.pkl
+  stage4_metadata: data/spatiotemporal/stage4_metadata.pkl
+
+# ==============================================================================
+# STAGE 1 — RAW INGESTION
+# ==============================================================================
+
+stage1:
+  # ERA5 variables to download
+  variables:
+    - "10m_u_component_of_wind"
+    - "10m_v_component_of_wind"
+    - "2m_dewpoint_temperature"
+    - "2m_temperature"
+    - "mean_sea_level_pressure"
+    - "surface_pressure"
+    - "total_precipitation"
+    - "surface_latent_heat_flux"
+    - "surface_net_solar_radiation"
+    - "surface_net_thermal_radiation"
+    - "surface_sensible_heat_flux"
+    - "surface_solar_radiation_downward_clear_sky"
+    - "surface_solar_radiation_downwards"
+    - "total_cloud_cover"
+    - "evaporation"
+    - "boundary_layer_height"
+    - "convective_available_potential_energy"
+    - "convective_inhibition"
+    - "land_sea_mask"
+    - "total_column_ozone"
+    - "total_column_water_vapour"
+
+  # Years and months to ingest
+  years: ["2019", "2020", "2021", "2022", "2023", "2024"]
+  months:
+    ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]
+
+  # GRIB → Parquet conversion settings
+  convert:
+    drop_grib_metadata: true
+    normalize_coordinates: true
+    write_hourly_parquet: true
+
+# ==============================================================================
+# STAGE 2 — VARIABLE‑SPLIT PARQUET + METADATA.JSON
+# ==============================================================================
+
+stage2:
+  # Output directory for variable‑split parquet
+  output_dir: data/intermediate
+
+  # Metadata.json settings
+  metadata:
+    write_flat_keys: true # "<timestamp>::<variable>"
+    include_paths: true
+    include_dtypes: true
+    include_shape: true
+
+# ==============================================================================
+# STAGE 3 — SINGLE‑VARIABLE CHUNK ENGINE
+# ==============================================================================
 
 stage3:
+  # Variables to process (single‑variable chunks)
   variables:
     - t2m
     - d2m
@@ -49,28 +135,114 @@ stage3:
     - v10
     - msl
     - sp
-    - tp
-    - slhf
-    - ssr
-    - str
-    - sshf
-    - ssrc
-    - ssrd
     - tcc
-    - e
     - blh
     - cape
     - cin
-    - lsm
     - tco3
     - tcwv
 
+    # Flux/static (commented out)
+    # - tp
+    # - slhf
+    # - ssr
+    # - str
+    # - sshf
+    # - ssrdc
+    # - ssrd
+    # - e
+    # - lsm
+
+  # Chunk windowing (12‑hour windows, 6‑hour stride)
   chunk:
     size:
-      time: 168 # 7 days × 24 hours
+      time: 12
     stride:
-      time: 168 # non-overlapping chunks
+      time: 6
+
+  # Orchestrator settings
+  orchestrator:
+    max_workers: 6
+    max_retries: 2
 
   output:
-    chunk_output_dir: data/chunks
     chunk_metadata_dir: data/chunks_metadata
+
+# ==============================================================================
+# SCHEMA — DYNAMIC SINGLE‑VARIABLE MODE
+# ==============================================================================
+# IMPORTANT:
+#   Stage‑3 dynamically injects the variable column into schema.columns.
+#   This config only defines coordinate columns + default dtypes.
+#
+#   Final schema per variable:
+#       columns: ["time", "lat", "lon", <variable>]
+#       dtypes:
+#         time: datetime64[ns]
+#         lat: float64
+#         lon: float64
+#         <variable>: float64
+# ==============================================================================
+
+schema:
+  columns:
+    - time
+    - lat
+    - lon
+
+  dtypes:
+    time: datetime64[ns]
+    lat: float64
+    lon: float64
+
+  version: "2.0-single-variable"
+
+# ==============================================================================
+# STAGE 4 — TENSOR CONSTRUCTION + POLLUTION‑RISK DATASET
+# ==============================================================================
+
+stage4:
+  enabled: true
+  input_path: data/intermediate/merged.nc
+  output_dir: data/spatiotemporal
+
+  # Tensor construction parameters
+  tensor:
+    lat_resolution: 0.25
+    lon_resolution: 0.25
+    time_resolution_hours: 12
+
+  # Pollution‑risk feature engineering
+  fields:
+    - t2m
+    - d2m
+    - u10
+    - v10
+    - msl
+    - sp
+    - tcc
+    - blh
+    - cape
+    - cin
+    - tco3
+    - tcwv
+
+  # Flux/static (commented out)
+  # - tp
+  # - slhf
+  # - ssr
+  # - str
+  # - sshf
+  # - ssrdc
+  # - ssrd
+  # - e
+  # - lsm
+
+# ==============================================================================
+# STAGE 5/6 — Model Training / Prediction
+# ==============================================================================
+model:
+  target: t2m
+  artifact_dir: models
+  features_dir: data/features
+  predictions_dir: data/predictions

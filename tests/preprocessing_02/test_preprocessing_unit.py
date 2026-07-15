@@ -22,20 +22,17 @@ Not covered (handled in other test files):
 - retry logic
 """
 
+import importlib
+from pathlib import Path
+
 # ==============================================================================
 # Unit Test — unzip_grib
 # ==============================================================================
 
 def test_unzip_module_has_main():
-    """
-    Unit test: unzip_grib should expose a main() function in Stage 2.
-
-    This does NOT execute unzip logic.
-    """
-    import src.preprocessing_02.unzip_grib as unzip
-
-    assert hasattr(unzip, "main"), "unzip_grib.main() must exist in Stage 2"
-    assert callable(unzip.main), "unzip_grib.main must be callable"
+    unzip = importlib.import_module("src.preprocessing_02.unzip_grib")
+    assert hasattr(unzip, "main")
+    assert callable(unzip.main)
 
 
 # ==============================================================================
@@ -43,15 +40,9 @@ def test_unzip_module_has_main():
 # ==============================================================================
 
 def test_inspect_module_has_main():
-    """
-    Unit test: inspect_grib should expose a main() function in Stage 2.
-
-    This does NOT open GRIB files or generate .idx files.
-    """
-    import src.preprocessing_02.inspect_grib as inspect
-
-    assert hasattr(inspect, "main"), "inspect_grib.main() must exist in Stage 2"
-    assert callable(inspect.main), "inspect_grib.main must be callable"
+    inspect = importlib.import_module("src.preprocessing_02.inspect_grib")
+    assert hasattr(inspect, "main")
+    assert callable(inspect.main)
 
 
 # ==============================================================================
@@ -59,15 +50,19 @@ def test_inspect_module_has_main():
 # ==============================================================================
 
 def test_convert_module_has_main():
-    """
-    Unit test: convert_grib_to_parquet should expose a main() function.
+    convert = importlib.import_module("src.preprocessing_02.convert_grib_to_parquet")
+    assert hasattr(convert, "main")
+    assert callable(convert.main)
 
-    This does NOT open GRIB files or write Parquet.
-    """
-    import src.preprocessing_02.convert_grib_to_parquet as convert
 
-    assert hasattr(convert, "main"), "convert_grib_to_parquet.main() must exist"
-    assert callable(convert.main), "convert_grib_to_parquet.main must be callable"
+# ==============================================================================
+# Unit Test — run_preprocessing
+# ==============================================================================
+
+def test_run_preprocessing_has_main():
+    rp = importlib.import_module("src.preprocessing_02.run_preprocessing")
+    assert hasattr(rp, "main")
+    assert callable(rp.main)
 
 
 # ==============================================================================
@@ -75,21 +70,22 @@ def test_convert_module_has_main():
 # ==============================================================================
 
 def test_paths_resolve_directories():
-    """
-    Unit test: ensure Paths() resolves directory attributes correctly.
-
-    This does NOT create directories — it only checks attribute existence.
-    """
     from src.utils.paths import Paths
-
     p = Paths()
 
-    required_attrs = [
-        "raw_dir",
-        "intermediate_dir",
-        "logs_dir",
-    ]
+    required_attrs = ["raw_dir", "intermediate_dir", "logs_dir"]
 
     for attr in required_attrs:
-        assert hasattr(p, attr), f"Paths() missing required attribute: {attr}"
-        assert isinstance(getattr(p, attr), str), f"Paths.{attr} must be a string"
+        assert hasattr(p, attr)
+        assert isinstance(getattr(p, attr), Path)
+
+
+# ==============================================================================
+# Unit Test — Ensure no heavy imports occur
+# ==============================================================================
+
+def test_no_heavy_imports():
+    import sys
+    banned = ["cfgrib", "eccodes"]
+    for name in banned:
+        assert name not in sys.modules

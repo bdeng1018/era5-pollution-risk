@@ -1,141 +1,117 @@
 """
-Branch 2: Single-Variable ERA5 Downloader
-Used by Stage 1 tests. Must remain stable and monkeypatch-friendly.
+Branch 2 — Stage 1 Test: Single-Variable ERA5 Downloader
+
+Aligned with REAL Branch‑2 behavior:
+    - variable names are normalized (2m_temperature → t2m)
+    - GRIB files written under raw/era5/<year>/<month>/<normalized_var>/
+    - metadata JSON written under metadata/ on SUCCESS ONLY
 """
 
 import json
-import os
-import time
 from pathlib import Path
-from typing import Optional
 
-import cdsapi
+import pytest
 
-from src.utils.config import load_variables
-from src.utils.logging import get_logger
-from src.utils.paths import Paths
+from src.download_01.download_era5_single import download_variable
 
-logger = get_logger(__name__)
-
-# ---------------------------------------------------------------------
-# Module-level client (required for monkeypatching)
-# ---------------------------------------------------------------------
-client = cdsapi.Client()
+# Mapping from long variable names → normalized ERA5 codes
+NORMALIZED = {
+    "2m_temperature": "t2m",
+    "surface_pressure": "sp",
+    "10m_u_component_of_wind": "u10",
+}
 
 
-# ---------------------------------------------------------------------
-# Directory validation (required by Stage 1 tests)
-# ---------------------------------------------------------------------
+@pytest.mark.parametrize(
+    "variable,year,month",
+    [
+        ("2m_temperature", "2023", "01"),
+        ("surface_pressure", "2022", "12"),
+        ("10m_u_component_of_wind", "2020", "07"),
+    ],
+)
+def test_download_single_variable(monkeypatch, tmp_path, variable, year, month):
+    """
+    Ensures:
+    - fake CDSAPI retrieve is called
+    - GRIB file is created in the correct normalized Branch‑2 directory
+    - metadata JSON is created on SUCCESS and contains correct fields
+    """
 
-def validate_directories() -> None:
-    paths = Paths()
-    for d in [paths.raw_dir, paths.metadata_dir, paths.config_dir]:
-        Path(d).mkdir(parents=True, exist_ok=True)
+    # ----------------------------------------------------------------------
+    # Monkeypatch environment
+    # ----------------------------------------------------------------------
+    monkeypatch.setenv("CDSAPI_URL", "https://fake-url")
+    monkeypatch.setenv("CDSAPI_KEY", "fake-key")
 
+    # ----------------------------------------------------------------------
+    # Monkeypatch cdsapi retrieve
+    # ----------------------------------------------------------------------
+    def fake_retrieve(dataset, request, outfile):
+        Path(outfile).parent.mkdir(parents=True, exist_ok=True)
+        Path(outfile).write_text("fake grib")
 
-# ---------------------------------------------------------------------
-# Environment validation
-# ---------------------------------------------------------------------
-
-def validate_environment() -> None:
-    validate_directories()
-
-    if "CDSAPI_URL" not in os.environ or "CDSAPI_KEY" not in os.environ:
-        raise EnvironmentError("Missing CDS credentials")
-
-
-# ---------------------------------------------------------------------
-# Config validation
-# ---------------------------------------------------------------------
-
-def validate_config() -> bool:
-    paths = Paths()
-    config_file = Path(paths.config_dir) / "config.json"
-
-    if not config_file.exists():
-        logger.warning(f"[stage1] Missing config.json at {config_file}")
-        return False
-
-    try:
-        json.loads(config_file.read_text())
-        return True
-    except Exception:
-        return False
-
-
-# ---------------------------------------------------------------------
-# Retry wrapper
-# ---------------------------------------------------------------------
-
-def download_with_retry(request: dict, outfile: Path) -> Optional[Path]:
-    max_attempts = 3
-    delay = 1
-
-    for attempt in range(1, max_attempts + 1):
-        try:
-            logger.info(f"[stage1] Attempt {attempt}: downloading → {outfile}")
-            client.retrieve("reanalysis-era5-single-levels", request, str(outfile))
-            return outfile
-        except Exception as e:
-            logger.error(f"[stage1] Download failed (attempt {attempt}): {e}")
-            time.sleep(delay)
-            delay *= 2
-
-    logger.error(f"[stage1] Exhausted retries for {outfile}")
-    return None
-
-
-# ---------------------------------------------------------------------
-# Single-variable download
-# ---------------------------------------------------------------------
-
-def download_variable(variable: str, year: str, month: str) -> Optional[Path]:
-    logger.info(f"[stage1] Branch 2 download start: {variable} {year}-{month}")
-
-    validate_environment()
-    validate_directories()
-    config_ok = validate_config()
-
-    paths = Paths()
-    outfile = Path(paths.raw_dir) / f"{variable}_{year}_{month}.grib"
-
-    request = {
-        "product_type": "reanalysis",
-        "format": "grib",
-        "variable": variable,
-        "year": year,
-        "month": month,
-        "day": [f"{d:02d}" for d in range(1, 32)],
-        "time": [f"{h:02d}:00" for h in range(24)],
-    }
-
-    result = download_with_retry(request, outfile)
-
-    metadata_path = Path(paths.metadata_dir) / f"metadata_{variable}_{year}_{month}.json"
-    metadata_path.write_text(
-        json.dumps(
-            {
-                "variable": variable,
-                "year": year,
-                "month": month,
-                "success": result is not None,
-                "config_valid": config_ok,
-            }
-        )
+    monkeypatch.setattr(
+        "src.download_01.download_era5_single.client.retrieve",
+        fake_retrieve
     )
 
-    return result
+    # ----------------------------------------------------------------------
+    # Monkeypatch the Paths class
+    # ----------------------------------------------------------------------
+    class FakePaths:
+        def __init__(self):
+            self.raw_dir = tmp_path / "raw" / "era5"
+            self.metadata_dir = tmp_path / "metadata"
+            self.config_dir = tmp_path / "config"
 
+    monkeypatch.setattr(
+        "src.download_01.download_era5_single.Paths",
+        FakePaths
+    )
 
-# ---------------------------------------------------------------------
-# CLI entrypoint
-# ---------------------------------------------------------------------
+    # ----------------------------------------------------------------------
+    # Fake config.yml
+    # ----------------------------------------------------------------------
+    config_file = tmp_path / "config" / "config.yml"
+    config_file.parent.mkdir(parents=True, exist_ok=True)
+    config_file.write_text(
+        f"years: [{year}]\nmonths: [{int(month)}]\nvariables: ['{variable}']"
+    )
 
-def main():
-    variables = load_variables()
-    for variable in variables:
-        download_variable(variable, "2023", "01")
+    # ----------------------------------------------------------------------
+    # Execute download
+    # ----------------------------------------------------------------------
+    result = download_variable(variable, year, month)
 
+    # ----------------------------------------------------------------------
+    # Validate GRIB output (normalized path)
+    # ----------------------------------------------------------------------
+    norm = NORMALIZED[variable]
 
-if __name__ == "__main__":
-    main()
+    expected_grib = (
+        tmp_path
+        / "raw"
+        / "era5"
+        / year
+        / month
+        / norm
+        / f"{norm}_{year}_{month}.grib"
+    )
+
+    assert result is not None
+    assert expected_grib.exists()
+
+    # ----------------------------------------------------------------------
+    # Validate metadata output (SUCCESS ONLY)
+    # ----------------------------------------------------------------------
+    metadata_file = tmp_path / "metadata" / f"metadata_{variable}_{year}_{month}.json"
+    assert metadata_file.exists()
+
+    metadata = json.loads(metadata_file.read_text())
+    assert metadata["variable"] == variable
+    assert metadata["year"] == year
+    assert metadata["month"] == month
+    assert metadata["success"] is True
+    assert metadata["config_valid"] is True
+    assert metadata["outfile"] == str(expected_grib)

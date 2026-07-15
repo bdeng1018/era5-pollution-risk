@@ -6,6 +6,7 @@
 dataset:
   product_type: reanalysis
   format: grib
+  download_format: uncompressed
   grid: 0.25
   timestep: hourly
 
@@ -17,6 +18,9 @@ ingestion:
 
 paths:
   config: configs/paths.yml
+
+parallel:
+  processes: 4
 
 metadata:
   enabled: true

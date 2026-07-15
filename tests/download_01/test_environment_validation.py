@@ -1,12 +1,12 @@
 """
-Branch 2: Environment validation tests for ERA5 download stage.
+Branch 2 — Environment & Config Validation Tests
+Matches actual Branch 2 signatures:
 
-Purpose:
-- Ensure environment validation detects missing CDS API key.
-- Ensure cfgrib import errors are caught.
-- Ensure eccodes availability is checked.
-- Ensure required directories are created automatically.
-- Avoid real network calls or real GRIB processing.
+    validate_environment(paths)
+    validate_directories(paths)
+    validate_config(paths)
+
+Uses YAML config.yml and correct Paths class.
 """
 
 import os
@@ -14,104 +14,91 @@ from pathlib import Path
 
 import pytest
 
-from src.download_01.download_era5_single import (
-    Paths,
-    validate_config,
-    validate_directories,
-    validate_environment,
-)
+import src.download_01.download_era5_single as single_mod
+
+
+# ------------------------------------------------------------------------------
+# Fake Paths that satisfies Pyright (inherits from real Paths)
+# ------------------------------------------------------------------------------
+class FakePaths(single_mod.Paths):
+    def __init__(self, tmp_path):
+        # Override directories for tmp_path isolation
+        self.raw_dir = tmp_path / "raw" / "era5"
+        self.metadata_dir = tmp_path / "metadata"
+        self.config_dir = tmp_path / "config"
+
 
 # ------------------------------------------------------------------------------
 # Environment validation
 # ------------------------------------------------------------------------------
-
-def test_environment_missing_credentials(monkeypatch):
+def test_environment_missing_credentials(monkeypatch, tmp_path):
     """Missing CDSAPI credentials should raise EnvironmentError."""
     monkeypatch.delenv("CDSAPI_URL", raising=False)
     monkeypatch.delenv("CDSAPI_KEY", raising=False)
 
+    paths = FakePaths(tmp_path)
+
     with pytest.raises(EnvironmentError):
-        validate_environment()
+        single_mod.validate_environment(paths)
 
 
-def test_environment_valid(monkeypatch):
+def test_environment_valid(monkeypatch, tmp_path):
     """Valid CDSAPI credentials should pass without raising."""
-    monkeypatch.setenv("CDSAPI_URL", "https://cds.climate.copernicus.eu/api")
-    monkeypatch.setenv("CDSAPI_KEY", "12345:abcdef")
+    monkeypatch.setenv("CDSAPI_URL", "https://fake-url")
+    monkeypatch.setenv("CDSAPI_KEY", "fake-key")
 
-    validate_environment()  # Should not raise
+    paths = FakePaths(tmp_path)
+
+    # Should not raise
+    single_mod.validate_environment(paths)
 
 
 # ------------------------------------------------------------------------------
 # Directory validation
 # ------------------------------------------------------------------------------
-
-def test_directory_auto_creation(tmp_path, monkeypatch):
+def test_directory_auto_creation(tmp_path):
     """Missing directories should be auto-created in Branch 2."""
-    def fake_init(self):
-        self.raw_dir = tmp_path / "raw"
-        self.metadata_dir = tmp_path / "metadata"
-        self.config_dir = tmp_path / "configs"
+    paths = FakePaths(tmp_path)
 
-    monkeypatch.setattr(Paths, "__init__", fake_init)
+    single_mod.validate_directories(paths)
 
-    validate_directories()
-
-    assert (tmp_path / "raw").exists()
-    assert (tmp_path / "metadata").exists()
-    assert (tmp_path / "configs").exists()
+    assert paths.raw_dir.exists()
+    assert paths.metadata_dir.exists()
+    assert paths.config_dir.exists()
 
 
 # ------------------------------------------------------------------------------
 # Config validation
 # ------------------------------------------------------------------------------
+def test_config_missing_returns_false(tmp_path):
+    """Missing config.yml should return False."""
+    paths = FakePaths(tmp_path)
 
-def test_config_missing_returns_false(tmp_path, monkeypatch):
-    """Missing config file should return False, not raise."""
-    def fake_init(self):
-        self.raw_dir = tmp_path
-        self.metadata_dir = tmp_path / "metadata"
-        self.config_dir = tmp_path / "configs"
-
-    monkeypatch.setattr(Paths, "__init__", fake_init)
-
-    result = validate_config()
+    result = single_mod.validate_config(paths)
     assert result is False
 
 
-def test_config_invalid_returns_false(tmp_path, monkeypatch):
-    """Invalid config file should return False."""
-    config_dir = tmp_path / "configs"
-    config_dir.mkdir()
+def test_config_invalid_returns_false(tmp_path):
+    """Invalid YAML config should return False."""
+    paths = FakePaths(tmp_path)
 
-    config_file = config_dir / "config.json"
-    config_file.write_text("{ invalid json }")
+    paths.config_dir.mkdir(parents=True, exist_ok=True)
+    bad_cfg = paths.config_dir / "config.yml"
+    bad_cfg.write_text("not: valid: yaml: :::")
 
-    def fake_init(self):
-        self.raw_dir = tmp_path
-        self.metadata_dir = tmp_path / "metadata"
-        self.config_dir = config_dir
-
-    monkeypatch.setattr(Paths, "__init__", fake_init)
-
-    result = validate_config()
+    result = single_mod.validate_config(paths)
     assert result is False
 
 
-def test_config_valid(tmp_path, monkeypatch):
-    """Valid config file should return True."""
-    config_dir = tmp_path / "configs"
-    config_dir.mkdir()
+def test_config_valid(tmp_path):
+    """Valid YAML config should return True."""
+    paths = FakePaths(tmp_path)
 
-    config_file = config_dir / "config.json"
-    config_file.write_text('{"variables": ["2m_temperature"]}')
+    paths.config_dir.mkdir(parents=True, exist_ok=True)
+    good_cfg = paths.config_dir / "config.yml"
+    good_cfg.write_text(
+        "years: [2023]\nmonths: [1]\nvariables: ['2m_temperature']"
+    )
 
-    def fake_init(self):
-        self.raw_dir = tmp_path
-        self.metadata_dir = tmp_path / "metadata"
-        self.config_dir = config_dir
-
-    monkeypatch.setattr(Paths, "__init__", fake_init)
-
-    result = validate_config()
+    result = single_mod.validate_config(paths)
     assert result is True

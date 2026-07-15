@@ -1,130 +1,138 @@
 """
-Stage 3: Chunk Planner (Branch 2)
+Stage 3: Chunk Planner (Branch 2 — Hourly Timeline, Single‑Variable)
+====================================================================
 
-Builds deterministic ChunkSpec objects from Stage 2 metadata.
-Responsible for:
-- time window segmentation (fixed-size windows)
-- variable segmentation
-- optional spatial tiling
-- constructing input/output paths
+This planner constructs ChunkSpec objects using the FULL hourly timestamp
+timeline produced by Stage 2 metadata.json.
+
+Branch‑2 constraints:
+    • exactly one input parquet per chunk
+    • no time_window field
+    • no spatial tiling
+    • no multi‑input lists
+    • no metadata_path field
+
+Single‑variable mode:
+    • each chunk contains: time, lat, lon, <variable>
+    • worker derives schema per chunk (no shared schema)
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 from src.core_03.chunk_spec import ChunkSpec
 
 
 class ChunkPlanner:
     def __init__(self, config: Dict[str, Any]):
-        """
-        Branch 2 Stage 3 config structure:
-
-        config["stage3"]["variables"] -> List[str] (ERA5 shortNames)
-        config["stage3"]["chunk"]["size"]["time"] -> int (hours)
-        config["stage3"]["chunk"]["stride"]["time"] -> int (hours)
-
-        config["paths"]["chunk_output_dir"] -> str
-        config["paths"]["chunk_metadata_dir"] -> str
-        """
-
-        self._cfg = config
-
         stage3 = config["stage3"]
 
-        # Variables are ERA5 shortNames (t2m, u10, v10, etc.)
-        self.variables: List[str] = stage3["variables"]
+        # Variables requested by config
+        self.requested_variables: List[str] = stage3["variables"]
 
+        # Window parameters
         chunk_cfg = stage3["chunk"]
-        self.chunk_size_hours: int = chunk_cfg["size"]["time"]
-        self.chunk_stride_hours: int = chunk_cfg["stride"]["time"]
+        self.window_size_hours: int = chunk_cfg["window_size_hours"]
+        self.window_stride_hours: int = chunk_cfg["window_stride_hours"]
 
-        self.spatial_tiles: Optional[List[str]] = stage3.get("spatial_tiles")
-
+        # Output directory
         paths_cfg = config["paths"]
         self.output_dir: Path = Path(paths_cfg["chunk_output_dir"])
-        self.metadata_dir: Path = Path(paths_cfg["chunk_metadata_dir"])
 
+        # Stage 2 metadata injected at build() time
         self.metadata: Dict[str, Any] = {}
 
-    # --------------------------------------------------------------------------
-    # Time window builder
-    # --------------------------------------------------------------------------
-
-    def _build_time_windows(self) -> List[Tuple[str, str]]:
-        timestamps = sorted(self.metadata["timestamps"])
-        windows: List[Tuple[str, str]] = []
-
-        n = len(timestamps)
-        size = self.chunk_size_hours
-        stride = self.chunk_stride_hours
-
-        i = 0
-        while i + size <= n:
-            start_ts = timestamps[i]
-            end_ts = timestamps[i + size - 1]
-            windows.append((start_ts, end_ts))
-            i += stride
-
-        return windows
+        self.config = config
 
     # --------------------------------------------------------------------------
-    # Build ChunkSpecs
+    # Helper: compute merge‑eligible variables
     # --------------------------------------------------------------------------
+    def _compute_merge_eligible_variables(self) -> List[str]:
+        eligible = []
+        meta_vars = self.metadata.get("variables", {})
 
+        for var in self.requested_variables:
+            if var in meta_vars:
+                eligible.append(var)
+
+        return eligible
+
+    # --------------------------------------------------------------------------
+    # Build ChunkSpecs from Stage 2 metadata
+    # --------------------------------------------------------------------------
     def build(self, metadata: Dict[str, Any], dtypes: Dict[str, Any]) -> List[ChunkSpec]:
-        """
-        Stage 2 metadata format:
+
+        specs: List[ChunkSpec] = []
+
+        # Reconstruct nested metadata structure
+        variables = {}
+        timestamps = set()
+
+        for key, entry in metadata.items():
+            ts, var = key.split("::")
+            timestamps.add(ts)
+
+            if var not in variables:
+                variables[var] = {}
+
+            variables[var][ts] = entry["path"]
 
         metadata = {
-            "variables": {
-                "<shortName>": {
-                    "<timestamp>": "/path/to/parquet",
-                    ...
-                },
-                ...
-            },
-            "timestamps": [...]
+            "variables": variables,
+            "timestamps": sorted(timestamps),
         }
-        """
 
         self.metadata = metadata
 
-        specs: List[ChunkSpec] = []
-        time_windows = self._build_time_windows()
+        # 1. Merge‑eligible variables
+        merge_vars = self._compute_merge_eligible_variables()
+        if not merge_vars:
+            print("❌ No merge‑eligible variables found.")
+            return specs
 
-        for variable in self.variables:
+        # 2. Full hourly timeline
+        full_ts = metadata.get("timestamps", [])
+        if not full_ts:
+            print("❌ metadata['timestamps'] missing or empty.")
+            return specs
 
-            # Skip variables missing from Stage 2 metadata
-            if variable not in self.metadata["variables"]:
-                continue
+        # 3. Build windows
+        windows: List[List[str]] = []
+        n = len(full_ts)
+        i = 0
 
-            variable_files = self.metadata["variables"][variable]
+        while i < n:
+            window_ts = full_ts[i : i + self.window_size_hours]
+            if window_ts:
+                windows.append(window_ts)
+            i += self.window_stride_hours
 
-            for start_ts, end_ts in time_windows:
+        # 4. Build ChunkSpecs for each variable and each window
+        for variable in merge_vars:
+            variable_files = metadata["variables"][variable]
 
-                # Skip windows missing required timestamps
-                if start_ts not in variable_files:
+            for window_ts in windows:
+                ts = window_ts[0]  # representative timestamp
+
+                if ts not in variable_files:
                     continue
 
-                for tile in self.spatial_tiles or [None]:
+                input_path = Path(variable_files[ts])
+                safe_ts = ts.replace(":", "-")
 
-                    input_path = Path(variable_files[start_ts])
+                output_name = f"{variable}_{safe_ts}_{self.window_size_hours}hr.parquet"
+                output_path = self.output_dir / output_name
 
-                    output_name = f"{variable}_{start_ts}_{tile or 'full'}.parquet"
-                    output_path = self.output_dir / output_name
+                chunk_id = f"{variable}_{ts}_{self.window_size_hours}hr"
 
-                    metadata_name = f"{variable}_{start_ts}_{tile or 'full'}.json"
-                    metadata_path = self.metadata_dir / metadata_name
+                spec = ChunkSpec(
+                    input_path=input_path,
+                    output_path=output_path,
+                    variable=variable,
+                    timestamp=ts,
+                    chunk_id=chunk_id,
+                )
 
-                    spec = ChunkSpec(
-                        variable=variable,
-                        time_window=(start_ts, end_ts),
-                        spatial_tile=tile,
-                        input_path=input_path,
-                        output_path=output_path,
-                        metadata_path=metadata_path,
-                    )
-                    specs.append(spec)
+                specs.append(spec)
 
         return specs

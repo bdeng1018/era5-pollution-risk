@@ -31,3 +31,10 @@ chunk_output_dir: data/chunks
 
 # Stage 3 Metadata (per-chunk JSON)
 chunk_metadata_dir: data/chunks_metadata
+
+# ==============================================================================
+# Stage 3 Merge Outputs (Branch 2)
+# ==============================================================================
+stage3_merged: data/intermediate/merged.nc
+stage3_metadata: data/intermediate/merged_metadata.json
+stage3_qc: data/intermediate/merged_qc.json
