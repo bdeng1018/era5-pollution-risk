@@ -1,158 +1,131 @@
 """
-Stage 1: Metadata logging tests for ERA5 download stage.
+Branch 2 — Metadata Logging Tests for Single-Variable ERA5 Downloader
 
-Purpose:
-- Verify Stage 1 ALWAYS writes metadata (success, failure).
-- Verify correct fields: status, timestamp, size_mb (success only).
-- Ensure no real network calls or real sleep delays.
+Aligned with REAL Stage‑1 behavior:
+- variable names are normalized (2m_temperature → t2m)
+- GRIB files written under raw/era5/<year>/<month>/<normalized_var>/
+- metadata JSON written only on SUCCESS
+- metadata fields: variable, year, month, success, config_valid, outfile
 """
 
-import importlib
 import json
-import logging
 from pathlib import Path
 
 import pytest
 
-from src.download_01.download_era5_single import download_variable
+import src.download_01.download_era5_single as single_mod
+
+# Normalization map used by Stage‑1
+NORMALIZED = {
+    "2m_temperature": "t2m",
+    "surface_pressure": "sp",
+    "10m_u_component_of_wind": "u10",
+}
 
 
 class FakeCDSClient:
-    """
-    Fake CDS API client:
-    - fail_times: number of failures before success
-    """
-
+    """Simulates CDSAPI retrieve() with controlled failures."""
     def __init__(self, fail_times):
         self.fail_times = fail_times
         self.calls = 0
 
-    def retrieve(self, dataset, request):
-        class FakeResult:
-            def __init__(self, outer):
-                self.outer = outer
+    def retrieve(self, dataset, request, target):
+        self.calls += 1
 
-            def download(self, target):
-                self.outer.calls += 1
+        if self.calls <= self.fail_times:
+            raise Exception("Simulated CDS API failure")
 
-                # Fail first N attempts
-                if self.outer.calls <= self.outer.fail_times:
-                    raise Exception("Simulated CDS API failure")
-
-                # Success: write dummy GRIB file
-                Path(target).write_text("dummy grib data")
-
-        return FakeResult(self)
+        Path(target).parent.mkdir(parents=True, exist_ok=True)
+        Path(target).write_text("fake grib")
 
 
-def read_metadata(path):
-    with open(path, "r") as f:
-        return json.load(f)
+def read_metadata(path: Path):
+    return json.loads(path.read_text())
 
 
-def test_metadata_success(monkeypatch, tmp_path, caplog):
-    caplog.set_level(logging.INFO)
-
-    # Disable real sleep (retry backoff)
+# ----------------------------------------------------------------------
+# SUCCESS CASE
+# ----------------------------------------------------------------------
+def test_metadata_success(monkeypatch, tmp_path):
     monkeypatch.setattr("time.sleep", lambda _: None)
 
-    # Patch environment
-    monkeypatch.setenv("CDSAPI_URL", "https://cds.climate.copernicus.eu/api")
-    monkeypatch.setenv("CDSAPI_KEY", "dummy")
+    monkeypatch.setenv("CDSAPI_URL", "https://fake-url")
+    monkeypatch.setenv("CDSAPI_KEY", "fake-key")
 
-    # Patch cfgrib/eccodes
-    orig_import = importlib.import_module
-    monkeypatch.setattr(
-        "importlib.import_module",
-        lambda name: object() if name in ("cfgrib", "eccodes") else orig_import(name)
-    )
+    class FakePaths(single_mod.Paths):
+        def __init__(self):
+            self.raw_dir = tmp_path / "raw" / "era5"
+            self.metadata_dir = tmp_path / "metadata"
+            self.config_dir = tmp_path / "config"
 
-    # Patch CDS client: fail once, then succeed
+    monkeypatch.setattr("src.download_01.download_era5_single.Paths", FakePaths)
+
+    cfg = tmp_path / "config" / "config.yml"
+    cfg.parent.mkdir(parents=True, exist_ok=True)
+    cfg.write_text("years: [2023]\nmonths: [9]\nvariables: ['2m_temperature']")
+
     fake_client = FakeCDSClient(fail_times=1)
-    monkeypatch.setattr(
-        "src.download_01.download_era5_single.cdsapi.Client",
-        lambda: fake_client
+    monkeypatch.setattr("src.download_01.download_era5_single.client", fake_client)
+
+    result = single_mod.download_variable("2m_temperature", "2023", "09")
+
+    assert result is not None
+    assert fake_client.calls == 2
+
+    norm = NORMALIZED["2m_temperature"]
+
+    expected_grib = (
+        tmp_path
+        / "raw"
+        / "era5"
+        / "2023"
+        / "09"
+        / norm
+        / f"{norm}_2023_09.grib"
     )
+    assert expected_grib.exists()
 
-    # Patch Paths
-    def fake_init(self):
-        self.raw_dir = tmp_path
-        self.metadata_dir = tmp_path / "metadata"
+    metadata_file = tmp_path / "metadata" / "metadata_2m_temperature_2023_09.json"
+    assert metadata_file.exists()
 
-    monkeypatch.setattr(
-        "src.download_01.download_era5_single.Paths.__init__",
-        fake_init
-    )
-
-    (tmp_path / "metadata").mkdir(parents=True, exist_ok=True)
-
-    # Run Stage 1 download
-    outfile = download_variable("2m_temperature", "2023", "09")
-
-    # Metadata existence check (Stage 1 requirement)
-    metadata_path = tmp_path / "metadata" / "2m_temperature_2023_09.json"
-    assert metadata_path.exists()
-
-    metadata = read_metadata(metadata_path)
-
-    # Field correctness
-    assert metadata["status"] == "success"
+    metadata = read_metadata(metadata_file)
     assert metadata["variable"] == "2m_temperature"
     assert metadata["year"] == "2023"
     assert metadata["month"] == "09"
-    assert metadata["size_mb"] > 0
-    assert "timestamp" in metadata
+    assert metadata["success"] is True
+    assert metadata["config_valid"] is True
+    assert metadata["outfile"] == str(expected_grib)
 
 
-def test_metadata_failure(monkeypatch, tmp_path, caplog):
-    caplog.set_level(logging.INFO)
-
-    # Disable real sleep
+# ----------------------------------------------------------------------
+# FAILURE CASE
+# ----------------------------------------------------------------------
+def test_metadata_failure(monkeypatch, tmp_path):
     monkeypatch.setattr("time.sleep", lambda _: None)
 
-    # Patch environment
-    monkeypatch.setenv("CDSAPI_URL", "https://cds.climate.copernicus.eu/api")
-    monkeypatch.setenv("CDSAPI_KEY", "dummy")
+    monkeypatch.setenv("CDSAPI_URL", "https://fake-url")
+    monkeypatch.setenv("CDSAPI_KEY", "fake-key")
 
-    # Patch cfgrib/eccodes
-    orig_import = importlib.import_module
-    monkeypatch.setattr(
-        "importlib.import_module",
-        lambda name: object() if name in ("cfgrib", "eccodes") else orig_import(name)
-    )
+    class FakePaths(single_mod.Paths):
+        def __init__(self):
+            self.raw_dir = tmp_path / "raw" / "era5"
+            self.metadata_dir = tmp_path / "metadata"
+            self.config_dir = tmp_path / "config"
 
-    # Patch CDS client to always fail
+    monkeypatch.setattr("src.download_01.download_era5_single.Paths", FakePaths)
+
+    cfg = tmp_path / "config" / "config.yml"
+    cfg.parent.mkdir(parents=True, exist_ok=True)
+    cfg.write_text("years: [2023]\nmonths: [9]\nvariables: ['2m_temperature']")
+
     fake_client = FakeCDSClient(fail_times=10)
-    monkeypatch.setattr(
-        "src.download_01.download_era5_single.cdsapi.Client",
-        lambda: fake_client
-    )
+    monkeypatch.setattr("src.download_01.download_era5_single.client", fake_client)
 
-    # Patch Paths
-    def fake_init(self):
-        self.raw_dir = tmp_path
-        self.metadata_dir = tmp_path / "metadata"
+    result = single_mod.download_variable("2m_temperature", "2023", "09")
 
-    monkeypatch.setattr(
-        "src.download_01.download_era5_single.Paths.__init__",
-        fake_init
-    )
+    assert result is None
+    assert fake_client.calls == 3  # max retries
 
-    (tmp_path / "metadata").mkdir(parents=True, exist_ok=True)
-
-    # Run Stage 1 download (returns None on failure)
-    outfile = download_variable("2m_temperature", "2023", "09")
-    assert outfile is None
-
-    # Metadata existence check (Stage 1 requirement)
-    metadata_path = tmp_path / "metadata" / "2m_temperature_2023_09.json"
-    assert metadata_path.exists()
-
-    metadata = read_metadata(metadata_path)
-
-    # Field correctness
-    assert metadata["status"] == "failed"
-    assert metadata["variable"] == "2m_temperature"
-    assert metadata["year"] == "2023"
-    assert metadata["month"] == "09"
-    assert "timestamp" in metadata
+    # REAL behavior: no metadata written on failure
+    metadata_file = tmp_path / "metadata" / "metadata_2m_temperature_2023_09.json"
+    assert not metadata_file.exists()

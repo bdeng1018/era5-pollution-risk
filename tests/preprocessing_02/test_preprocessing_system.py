@@ -23,7 +23,10 @@ Not covered (handled in acceptance/regression tests):
 - performance characteristics
 """
 
-def test_stage2_system_execution():
+import importlib
+
+
+def test_stage2_system_execution(tmp_path, monkeypatch):
     """
     System test: ensure run_preprocessing.main() executes without crashing.
 
@@ -32,10 +35,9 @@ def test_stage2_system_execution():
 
     No GRIB files are opened and no Parquet files are written in this test.
     """
-    import src.preprocessing_02.run_preprocessing as rp
+    monkeypatch.setenv("ERA5_BASE_DIR", str(tmp_path))
+    rp = importlib.import_module("src.preprocessing_02.run_preprocessing")
 
-    # The system test calls main() but expects it to short-circuit gracefully
-    # because no real data is present. The guarantee is simply: no crash.
     try:
         rp.main()
     except Exception as exc:

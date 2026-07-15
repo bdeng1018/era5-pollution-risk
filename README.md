@@ -1,58 +1,131 @@
-# Branch 2 — ERA5 Ingestion, Preprocessing & Core Processing Pipeline (Development Snapshot)
+# Branch 2 — ERA5 Ingestion, Preprocessing, Core Processing & Spatiotemporal Structuring Pipeline (Current Architecture)
 
-Branch 2 expands the Branch 1 MVP into a multi‑stage, production‑aligned ERA5 ingestion, preprocessing, and **chunked core processing** system. This branch introduces:
+Branch 2 is the production‑aligned ERA5 pipeline built around **single‑variable ingestion**, **deterministic preprocessing**, **parallel‑safe chunking**, and **dense spatiotemporal tensor construction**. It replaces the Branch 1 MVP with a compiler-style architecture designed for multi-year, multi‑variable ERA5 analytics and downstream ML workflows.
 
-- A production‑grade ingestion stage (Stage 1) with retry logic, metadata, and directory validation
-- A deterministic preprocessing stage (Stage 2) with stable, passing tests
-- A parallel‑safe, deterministic chunk‑processing engine (Stage 3)
-- Unified logging
-- Structured metadata
-- A robust engineering architecture designed for multi‑year scaling
+Branch 2 establishes:
 
-This README documents the current development snapshot of Branch 2. It intentionally reflects the state of the branch at push time:
+- deterministic, restart-safe multi-stage processing
+- stable hourly metadata construction
+- parallel-safe chunk planning and execution
+- structured logging and diagnostics
+- reproducible intermediate artifacts
+- a clear forward roadmap toward feature engineering, dataset assembly, modeling, and evaluation
 
-- Stage 1: Work-in-progress (some tests failing)
-- Stage 2: Fully implemented and passing all tests
-- Stage 3: Fully implemented and passing all tests
-- Main branch remains stable and untouched
+This README reflects the *current, correct* state of Branch 2:
 
 ---
 
-## Overview
+## Architecture Overview
 
-Branch 2 introduces a **three-stage ERA5 pipeline**:
+Branch 2 implements a **four-stage ERA5 compiler pipeline**, where each stage produces a well‑defined intermediate representation (IR):
 
-1. **Stage 1 — Ingestion (WIP)**
-   - CDS API client
-   - Retry logic
-   - Directory validation (currently being debugged)
-   - Metadata logging
-   - Config‑driven execution
-   - Some pytest contracts failing (expected for Branch 2 development)
+```code
+IR₀ (GRIB diagnostic)
+→ IR₁ (Parquet canonical)
+→ IR₂ (Chunked Parquet)
+→ IR₃ (Tensors)
+→ (future) Features → Datasets → Models → Evaluation
+```
 
-2. **Stage 2 — Preprocessing (Stable)**
-   - Inspect GRIB structure
-   - Generate `.idx` files for cfgrib
-   - Convert GRIB → hourly Parquet
-   - Generate unified `metadata.json`
-   - Deterministic behavior
-   - All tests passing
+### Stage 1 — Ingestion (WIP)
 
-3. **Stage 3 — Chunked Core Processing (New, Stable)**
-   - Metadata-driven chunk planning
-   - Deterministic transforms
-   - Schema-validated Parquet outputs
-   - Parallel-safe worker isolation
-   - Reproducible intermediate artifacts
-   - Tests in progress
+#### IR₀ input generation
 
-Stage 1 failures are acceptable in this feature branch.
+- CDS API client
+- Retry logic
+- Directory validation
+- Config‑driven execution
+- Produces raw GRIB files for Stage 2
+- Some tests expected to fail during active development
+
+Stage 1 produces the raw meteorological archives consumed by Stage 2.
+
+### Stage 2 — Preprocessing (Stable)
+
+#### IR₀ → IR₁ compiler stage
+
+Stage 2 transforms raw GRIB files into structured Parquet output and produces two metadata artifacts:
+
+- `grib_metadata.json` — GRIB‑level diagnostic metadata (IR₀)
+- `metadata.json` — Parquet‑only canonical hourly metadata (IR₁)
+
+Core responsibilities:
+
+- Optional ZIP extraction
+- GRIB inspection (diagnostic-only)
+- `.idx` generation for cfgrib
+- GRIB → hourly/static Parquet conversion
+- Instantaneous / static / flux classification
+- Tail‑hour cleanup (e.g., CIN 2018‑12‑31 spillover)
+- Deterministic, restart‑safe Parquet metadata builder
+
+Canonical directory layout:
+
+```code
+data/intermediate/<year>/<month>/<variable>/<variable>_<timestamp>.parquet
+```
+
+Stage 2 produces the **canonical IR₁** consumed by Stage 3.
+
+### Stage 3 — Chunked Core Processing (Stable)
+
+#### IR₁ → IR₂ compiler stage
+
+- Metadata-driven chunk planning (consumes IR₁ metadata.json)
+- Deterministic transforms
+- Parallel-safe worker isolation
+- Schema-validated Parquet outputs
+- Reproducible intermediate artifacts
+- Produces **chunked Parquet IR₂**
+
+Stage 3 is the temporal/spatial core of the compiler.
+
+### Stage 4 — Spatiotemporal Tensor Builder (New, Stable)
+
+#### IR₂ → IR₃ compiler stage
+
+- Dense tensor construction
+- Grid normalization
+- Multi‑year tensor stitching
+- Deterministic tensor shapes
+- Tensor metadata + diagnostics
+- Produces **tensors (IR₃)** ready for feature engineering
+
+Stage 4 is the bridge between structured Parquet and ML‑ready tensors.
+
+### Summary
+
+Stages 1–4 form the **engineering foundation** of the ERA5 compiler pipeline:
+
+- **Stage 1:** Raw GRIB ingestion
+- **Stage 2:** GRIB → Parquet + canonical metadata
+- **Stage 3:** Chunked Parquet
+- **Stage 4:** Tensors
+
+Everything downstream (features, datasets, models, evaluation) depends on the correctness and determinism of these four IR transitions.
 
 ---
 
-## Branch 2 Directory Structure (Git‑Safe)
+## Design Principles
 
-```markdown
+Branch 2 is built on explicit engineering principles:
+
+- **Determinism** — every stage produces stable, reproducible outputs
+- **Restart‑safety** — any stage can be re‑run without corrupting downstream artifacts
+- **Separation of concerns** — each stage has a single responsibility
+- **Compiler‑style IR evolution** — data becomes more structured at each stage
+- **Diagnostics‑first design** — every stage emits structured logs and validation artifacts
+- **Parallel‑safety** — workers operate independently without shared mutable state
+- **Schema contracts** — every intermediate artifact is validated
+- **Multi-year scalability** - directory layout and metadata support long-horizon ingestion
+
+These principles guide all current and future stages.
+
+---
+
+## Directory Layout (Git-Safe)
+
+```code
 era5-pollution-risk/
 ├── Makefile
 ├── README.md
@@ -66,18 +139,31 @@ era5-pollution-risk/
 │   ├── variables.yml
 │   └── years.yml
 │
-├── data/
+├── data/                    # empty, .gitkeep only
 │   ├── raw/
-│   │   └── era5/            # empty, .gitkeep only
-│   ├── intermediate/        # Stage 2 outputs
-│   ├── chunks/              # Stage 3 outputs
-│   ├── logs/                # structured logs
-│   ├── metadata/            # metadata JSON
-│   └── predictions/         # modeling outputs
+│   │   └── era5/            # Stage 1 outputs (GRIB)
+│   ├── intermediate/        # Stage 2 outputs (hourly Parquet)
+│   ├── chunks/              # Stage 3 outputs (chunked Parquet)
+│   ├── chunks_metadata/     # Chunk metadata
+│   ├── spatiotemporal/      # Stage 4 outputs (dense spatiotemporal tensors)
+│   ├── features/            # Stage 5 outputs (engineered features)
+│   ├── datasets/            # Stage 6 outputs (ML-ready datasets)
+│   ├── predictions/         # Stage 7 outputs (evaluation + inference)
+│   ├── logs/                # structured logs for all stages
+│   └── metadata/            # Parquet metadata
+│
+├── models/                  # Stage 6 outputs (trained models + metadata)
 │
 ├── diagrams/
 │   ├── pipeline.md
 │   └── pipeline.txt
+│
+├── scripts/
+│   └── diagnostics/         # stage-specific diagnostics (recommended)
+│       ├── stage1/
+│       ├── stage2/
+│       ├── stage3/
+│       └── stage4/
 │
 ├── environment.yml
 │
@@ -97,24 +183,39 @@ era5-pollution-risk/
 │   │   ├── __init__.py
 │   │   ├── download_era5_monthly.py
 │   │   ├── download_era5_single.py
-|   |   └── paths.py
+│   │   └── paths.py
 │   │
 │   ├── preprocessing_02/
 │   │   ├── README.md
 │   │   ├── __init__.py
-│   │   ├── convert_grib_to_parquet.py
-│   │   ├── inspect_grib.py
 │   │   ├── run_preprocessing.py
-│   │   └── unzip_grib.py
+│   │   ├── unzip_grib.py
+│   │   ├── inspect_grib.py
+│   │   ├── convert_grib_to_parquet.py
+│   │   └── metadata_parquet.py
 │   │
-│   └── core_03/
+│   ├── core_03/
+│   │   ├── README.md
+│   │   ├── __init__.py
+│   │   ├── __main__.py
+│   │   ├── chunk_orchestrator.py
+│   │   ├── chunk_spec.py
+│   │   ├── chunk_planner.py
+│   │   ├── chunk_worker.py
+│   │   ├── chunk_schema.py
+│   │   └── chunk_merge.py
+│   │
+│   └── spatiotemporal_04/
 │       ├── README.md
 │       ├── __init__.py
-│       ├── chunk_spec.py
-│       ├── chunk_planner.py
-│       ├── chunk_worker.py
-│       ├── chunk_orchestrator.py
-│       └── chunk_schema.py
+│       ├── driver.py
+│       ├── grid.py
+│       ├── mask.py
+│       ├── temporal_align.py
+│       ├── temporal_interpolate.py
+│       ├── tensor_builder.py
+│       ├── qc.py
+│       └── metadata.py
 │
 └── tests/
     ├── download_01/
@@ -125,133 +226,257 @@ era5-pollution-risk/
     │   └── test_retry_logic.py
     │
     ├── preprocessing_02/
-    │   ├── test_preprocessing_acceptance.py
-    │   ├── test_preprocessing_integration.py
-    │   ├── test_preprocessing_regression.py
     │   ├── test_preprocessing_smoke.py
+    │   ├── test_preprocessing_unit.py
+    │   ├── test_preprocessing_integration.py
+    │   ├── test_preprocessing_acceptance.py
     │   ├── test_preprocessing_system.py
-    │   └── test_preprocessing_unit.py
+    │   └── test_preprocessing_regression.py
     │
-    └── core_03/
-        ├── test_chunk_spec.py
-        ├── test_chunk_planner.py
-        ├── test_chunk_worker.py
-        ├── test_chunk_orchestrator.py
-        └── test_chunk_schema.py
+    ├── core_03/
+    │   ├── test_chunk_orchestrator.py
+    │   ├── test_chunk_spec.py
+    │   ├── test_chunk_planner.py
+    │   ├── test_chunk_worker.py
+    │   ├── test_chunk_schema.py
+    │   └── test_chunk_merge.py
+    │
+    └── spatiotemporal_04/
+        ├── test_spatiotemporal_smoke.py
+        │
+        ├── test_grid_unit.py
+        ├── test_mask_unit.py
+        ├── test_temporal_align_unit.py
+        ├── test_temporal_interpolate_unit.py
+        ├── test_tensor_builder_unit.py
+        ├── test_qc_unit.py
+        └── test_metadata_unit.py
+        │
+        ├── test_spatiotemporal_integration.py
+        ├── test_spatiotemporal_acceptance.py
+        ├── test_spatiotemporal_system.py
+        └── test_spatiotemporal_regression.py
 ```
+
+The layout is stable and production-aligned.
 
 ---
 
-## Pipeline Stages
+## Stage Architecture
 
 ### Stage 1 — Ingestion (WIP)
 
-Status: Partially implemented, some tests failing.
+**Inputs:** CDS API configuration
+**Outputs:** Monthly GRIB files
 
-Current capabilities:
+**Invariants:**
 
-- CDS API client
-- Retry logic
-- Basic ingestion flow
-- Directory validation
-- Metadata logging
+- Directory structure must match config
+- All downloads logged with metadata
 
-Known issues:
+**Diagnostics:**
 
-- Directory validation fails under certain nested layouts
-- Config path resolution issues
-- Some tests fail due to nondeterministic external API behavior
-
-This is expected for a feature branch.
-
----
+- Retry logs
+- Directory validation logs
 
 ### Stage 2 — Preprocessing (Stable)
 
-Status: Fully implemented, all tests passing.
+**Inputs:** GRIB files
+**Outputs:**
 
-Capabilities:
+- Hourly Parquet files
+- Unified `metadata.json`
 
-- Inspect GRIB structure
-- Generate `.idx` files
-- Convert GRIB → hourly Parquet
-- Generate unified `metadata.json`
-- Validate intermediate outputs
-- Structured logging
-- Deterministic behavior
+**Invariants:**
 
-Stage 2 is production‑ready once Stage 1 stabilizes.
+- Only instantaneous variables appear in metadata
+- Flux/static variables are excluded
+- No tail-hour timestamps
+- All Parquets have normalized coordinates
+
+**Diagnostics:**
+
+- `.idx` generation logs
+- Tail-hour warnings
+- Parquet validation logs
+
+### Stage 3 — Chunked Core Processing (Stable)
+
+**Inputs:** Stage 2 metadata
+**Outputs:** Chunked Parquet files
+
+**Invariants:**
+
+- Chunk boundaries deterministic
+- No NaNs in merged chunks
+- Schema-validated outputs
+
+**Diagnostics:**
+
+- Chunk planner logs
+- Worker isolation logs
+- Schema validation reports
+
+### Stage 4 - Spatiotemporal Tensor Builder (Stable)
+
+**Inputs:** Chunked Parquet files
+**Outputs:** Dense spatiotemporal tensors
+
+**Invariants:**
+
+- Tensor shapes deterministic
+- No sparsity
+- Grid normalization applied consistently
+- Multi-year stitching produces continuous temporal coverage
+
+**Diagnostics:**
+
+- Tensor shape logs
+- Grid alignment checks
+- Temporal continuity checks
 
 ---
 
-### Stage 3 — Chunked Core Processing (New, Stable)
+## Intermediate Representation (IR) Evolution
 
-Status: Fully implemented, all tests passing.
+Branch 2 uses a compiler-style IR evolution:
 
-Capabilities:
+```code
+GRIB (raw)
+→ Parquet (normalized hourly)
+→ Chunked Parquet (structured, schema‑validated)
+→ Tensors (dense spatiotemporal arrays)
+→ [Stage 5] Features (engineered domain features)
+→ [Stage 6] Datasets (train/val/test windows)
+→ [Stage 7] Models (baseline + deep learning)
+→ [Stage 8] Evaluation (spatial + temporal metrics)
+```
 
-- Metadata-driven chunk planning
-- Deterministic transforms
-- Schema-validated Parquet outputs
-- Parallel-safe worker isolation
-- Reproducible intermediate artifacts
-- Clean separation of planner, worker, orchestrator, and schema
+Each stage increases structure, determinism, and ML-readiness.
 
-Stage 3 is the foundation for Stage 4 (spatiotemporal structuring) and Stage 5 (feature engineering).
+---
+
+## Failure Modes & Diagnostics
+
+Branch 2 explicitly handles:
+
+- **Tail‑hour contamination** (CIN/CAPE, flux variables)
+- **Flux variable contamination** (accumulated fields)
+- **Stale Parquet poisoning** (pre‑fix artifacts)
+- **Stale metadata poisoning**
+- **Chunk misalignment**
+- **Grid mismatch**
+- **Timestamp drift**
+- **Tensor sparsity**
+- **Tensor shape mismatch**
+
+Diagnostics are emitted at every stage to detect and prevent these issues.
+
+---
+
+## Future Roadmap (Concise, High-Signal)
+
+Branch 2 establishes the engineering foundation.
+Stages 5–8 introduce analytics, ML, and deployment.
+
+### Stage 5 - Feature Engineering
+
+- Temporal aggregations
+- Spatial aggregations
+- Pollution‑specific engineered features
+- Feature schema versioning
+
+### Stage 6 - ML Dataset Assembly
+
+- Train/val/test splits
+- Temporal windows
+- Spatial windows
+- Target construction
+- Dataset versioning
+
+### Stage 7 — Modeling
+
+- Baseline models
+- Deep learning models
+- Hyperparameter search
+- Model metadata
+- Reproducibility contracts
+
+### Stage 8 — Evaluation & Deployment
+
+- Spatial/temporal evaluation
+- Metrics
+- Model cards
+- Deployment artifacts
+- Monitoring
+
+This roadmap is intentionally concise but strategically complete.
 
 ---
 
 ## Testing Status
 
-| Stage     | Status | Notes |
-|-----------|--------|-------|
-| Stage 1   | ❌ Some failing tests | Expected during Branch 2 development |
-| Stage 2   | ✅ All tests passing  | Deterministic and stable |
-| Stage 3   | ✅ All tests passings  | Deterministic and stable |
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="ca://s?q=Discuss_Stage_1_Ingestion">Stage 1</a></td>
+<td>⚠️ WIP</td>
+<td>Some tests failing (expected)</td>
+</tr>
+<tr>
+<td><a href="ca://s?q=Discuss_Stage_2_Preprocessing">Stage 2</a></td>
+<td>✅ Stable</td>
+<td>Deterministic, restart‑safe</td>
+</tr>
+<tr>
+<td><a href="ca://s?q=Discuss_Stage_3_Chunking">Stage 3</a></td>
+<td>✅ Stable</td>
+<td>Schema‑validated, parallel‑safe</td>
+</tr>
+<tr>
+<td><a href="ca://s?q=Discuss_Stage_4_Tensor_Builder">Stage 4</a></td>
+<td>✅ Stable</td>
+<td>Dense tensors, deterministic shapes</td>
+</tr>
+</tbody>
+</table>
 
 ---
 
 ## Running the Pipeline
 
-### 1. Configure the pipeline
-
-Edit `config/paths.yml`:
-
-```yaml
-paths:
-  raw_dir: "data/raw"
-  intermediate_dir: "data/intermediate"
-  chunks_dir: "data/chunks"
-  logs_dir: "data/logs"
-```
-
-### 2. Run Stage 1 (WIP — choose one)
-
-Run monthly ingestion:
+### Stage 1
 
 ```bash
 python -m src.download_01.download_era5_monthly --config configs/config.yml
 ```
 
-Or run single‑variable ingestion:
-
-```bash
-python -m src.download_01.download_era5_single --config configs/config.yml
-```
-
-### 3. Run Stage 2 (Stable)
+### Stage 2
 
 ```bash
 python -m src.preprocessing_02.run_preprocessing --config configs/config.yml
 ```
 
-### 4. Run Stage 3 (New)
+### Stage 3
 
 ```bash
-python -m src.core_03.chunk_orchestrator --config configs/config.yml
+python -m src.core_03 --config configs/config.yml
 ```
 
-### 5. Makefile
+### Stage 4
+
+```bash
+python -m src.spatiotemporal_04.driver --config configs/config.yml
+```
+
+### Makefile
 
 ```makefile
 download:
@@ -261,55 +486,59 @@ preprocess:
     python -m src.preprocessing_02.run_preprocessing --config configs/config.yml
 
 core:
-    python -m src.core_03.chunk_orchestrator --config configs/config.yml
+    python -m src.core_03 --config configs/config.yml
 
-branch2:
+spatiotemporal:
+    python -m src.spatiotemporal_04.driver --config configs/config.yml
+
+all:
     make download
     make preprocess
     make core
+    make spatiotemporal
 ```
 
 ---
 
 ## Branch Policy
 
-This README applies only to Branch 2.
-
-- Stage 1 may fail
-- Stage 2 must pass
-- Stage 3 must run deterministically
-- Main branch must remain stable
-- This branch is safe to push
+- Stage 1 may fail during active development
+- Stage 2 must remain deterministic
+- Stage 3 must remain determinstic
+- Stage 4 must produce dense tensors
+- Main branch remains stable
+- Branch 2 is safe to push
 
 ---
 
-## What’s Different From Branch 1 (Branch 2 Snapshot)
+## Branch 1 → Branch 2 Snapshot
 
-Branch 2 introduces real ingestion, real preprocessing, and a real parallel processing engine.
+Branch 1 = MVP <br>
+Branch 2 = production‑aligned pipeline <br>
+Branch 3 = distributed parallelization (future)
 
-Key differences:
+Key Branch 2 upgrades:
 
-- Multi‑stage pipeline
-- CDS API client with retries
+- Multi‑stage architecture
 - Config‑driven ingestion
-- Directory validation
 - Structured metadata
 - Deterministic preprocessing
 - Parallel chunk processing
-- Structured logging
-
-Branch 1 = MVP
-Branch 2 = real pipeline
-Branch 3 = distributed parallelization
+- Dense spatiotemporal tensors
+- Unified logging
+- Schema contracts
 
 ---
 
-## Summary
+## 📬 Maintainer
 
-This push represents:
+**Brian Deng** <br>
+Los Angeles, CA
 
-- A stable Stage 2
-- A fully implemented Stage 3
-- A partially complete Stage 1
-- A correct feature-branch workflow
-- A clean snapshot for engineering review and recruiter visibility
+**Focus:**
+
+- Climate analytics
+- Hazard‑risk modeling
+- ERA5‑based pipelines
+- Geospatial ML
+- Pollution‑risk analytics

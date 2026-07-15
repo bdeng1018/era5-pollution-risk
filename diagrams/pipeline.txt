@@ -1,27 +1,27 @@
-ERA5 Pipeline — Branch 2 (Stages 1–3)
-=====================================
+ERA5 Pipeline — Branch 2 (Stages 1–4 Implemented)
+=================================================
 
-Stage 1 — download_01
----------------------
+Stage 1 — download_01 (GRIB ingestion)
+--------------------------------------
 src/download_01/
+
     download_era5_single.py
-        • Single-variable GRIB downloader (Branch 1 compatibility)
-        • Produces:
-            - <var>_<year>_<month>.grib
-            - <var>_<year>_<month>.grib.<hash>.idx
+        • Branch 1 compatibility only (single-variable GRIB)
+        • Not used in Branch 2 Makefile
 
     download_era5_monthly.py
-        • Monthly ZIP + multi-variable GRIB downloader (Branch 2)
-        • Produces:
-            - era5_<year>_<month>.zip
-            - era5_<year>_<month>.grib
+        • Branch 2 monthly ZIP + multi-variable GRIB downloader
+        • Produces per-variable GRIBs under:
+            data/raw/era5/<year>/<month>/<variable>/
+                <variable>_<year>_<month>.grib
+                <variable>_<year>_<month>.grib.<hash>.idx
 
     paths.py
-        • Stage 1/2-safe Paths class (raw/, metadata/, intermediate/, logs/)
+        • Shared path utilities for raw/, metadata/, intermediate/, logs/
 
 
-Stage 2 — preprocessing_02
---------------------------
+Stage 2 — preprocessing_02 (Preprocessing GRIB to Parquet)
+----------------------------------------------------------
 src/preprocessing_02/
 
     unzip_grib.py
@@ -37,7 +37,7 @@ src/preprocessing_02/
     convert_grib_to_parquet.py
         • Converts BOTH single-variable + multi-variable GRIBs
         • Produces HOURLY Parquet slices
-        ↓ intermediate/
+        ↓ data/intermediate/<year>/<month>/<var>/
             - <grib>_<var>_<timestamp>.parquet
 
     run_preprocessing.py  (orchestrator)
@@ -45,7 +45,7 @@ src/preprocessing_02/
         Step 2: inspect_all_gribs()
         Step 3: convert_grib_to_parquet()  (parallel)
         Step 4: build_master_metadata()
-        ↓ metadata/
+        ↓ data/metadata/
             - metadata.json
               {
                 "variables": {
@@ -64,15 +64,15 @@ src/core_03/
         • Consumes Stage 2 metadata.json
 
     chunk_schema.py
-        • Defines the schema for chunked Parquet outputs
-        • Ensures deterministic structure for Stage 4
+        • Defines deterministic schema for chunked Parquet outputs
+        • Ensures stable structure for Stage 4
 
     chunk_planner.py
         • Plans chunk execution:
-            - which timestamps
-            - which variables
-            - which spatial tiles
-        • Produces a list of ChunkSpec objects
+            - timestamps
+            - variables
+            - spatial tiles
+        • Produces list of ChunkSpec objects
 
     chunk_worker.py
         • Executes a single chunk:
@@ -80,35 +80,69 @@ src/core_03/
             - applies schema
             - writes chunked Parquet
 
+    chunk_merge.py
+        • Merges all chunk_<tile>_<timestamp>.parquet into merged.nc
+        • Produces merged_metadata.json + merged_qc.json
+
     chunk_orchestrator.py
         • Main Stage 3 entrypoint
         • Parallel execution of chunk workers
-        ↓ core_03_output/
+        ↓ data/chunks/
             - chunk_<tile>_<timestamp>.parquet
+        ↓ data/chunks_metadata/
+            - chunk_<tile>_<timestamp>.json
+        ↓ data/intermediate/
+            - merged.nc
+            - merged_metadata.json
+            - merged_qc.json
+
+
+Stage 4 — spatiotemporal_04 (Compiler Layer)
+--------------------------------------------
+src/spatiotemporal_04/
+
+    Compiler pass order:
+        1. grid
+        2. mask
+        3. temporal_align
+        4. temporal_interpolate
+        5. qc
+        6. metadata
+        7. tensor_builder
+
+    • Produces canonical spatiotemporal tensor
+    • Deterministic, pure, import-safe modules
+    ↓ data/spatiotemporal/
+        - spatiotemporal_tensor.nc
+        - stage4_<diagnostic>.json
+
 
 -------------------------------------
-Forward Plan — Stages 4–8 (Not Yet Implemented)
+Forward Plan — Stages 5–8 (Branch 2+3)
 -------------------------------------
 
-Stage 4 — spatiotemporal structuring
-    • Merge chunked tiles into unified spatiotemporal cubes
-    • Build multi-variable tensors
-    • Output: structured/ (per-variable + combined)
-
-Stage 5 — feature engineering
+Stage 5 — feature engineering (Branch 2)
     • Derived features (gradients, anomalies, rolling windows)
+    • Pollution-risk composites
     • Spatial aggregations
-    • Output: features/
+    ↓ data/features/
 
-Stage 6 — dataset assembly
+Stage 6 — dataset assembly + modeling (Branch 2)
     • Train/val/test splits
     • Normalization
-    • Output: datasets/
+    • ML/AI models (regression, transformers, CNNs, time-series)
+    • Academic-paper-ready datasets
+    ↓ data/datasets/
+    ↓ models/
 
-Stage 7 — modeling
-    • ML/AI models (regression, transformers, CNNs)
-    • Output: models/
+Stage 7 — evaluation + inference (Branch 2)
+    • Metrics, plots, predictions, backtests
+    ↓ data/predictions/
 
-Stage 8 — evaluation + inference
-    • Metrics, plots, predictions
-    • Output: predictions/
+Stage 8 — deployment (Branch 3)
+    • Docker, FastAPI, MLflow, CI/CD
+    • Cloud batch inference + REST endpoints
+    ↓ deployment/
+    ↓ docker/
+    ↓ api/
+    ↓ mlflow/

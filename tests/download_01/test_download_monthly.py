@@ -1,145 +1,168 @@
 """
-Branch 2: Monthly ERA5 Downloader
-Used by Stage 1 tests. Must remain stable and monkeypatch-friendly.
+Branch 2 — Stage 1 Test: Monthly ERA5 Orchestrator
+
+Aligned with REAL Stage‑1 behavior:
+- variable names are normalized (2m_temperature → t2m)
+- monthly orchestrator delegates to download_variable()
+- GRIB files written under raw/era5/<year>/<month>/<normalized_var>/
+- metadata JSON written under metadata/
 """
 
 import json
-import os
-import time
 from pathlib import Path
-from typing import Optional
 
-import cdsapi
+import pytest
 
-from src.utils.config import load_months, load_variables, load_years
-from src.utils.logging import get_logger
-from src.utils.paths import Paths
+from src.download_01.download_era5_monthly import main as monthly_main
 
-logger = get_logger(__name__)
-
-# ---------------------------------------------------------------------
-# Module-level client (required for monkeypatching)
-# ---------------------------------------------------------------------
-client = cdsapi.Client()
+# Normalization map used by Stage‑1
+NORMALIZED = {
+    "2m_temperature": "t2m",
+    "surface_pressure": "sp",
+    "10m_u_component_of_wind": "u10",
+}
 
 
-# ---------------------------------------------------------------------
-# Directory validation (required by Stage 1 tests)
-# ---------------------------------------------------------------------
+@pytest.mark.parametrize(
+    "year,month,variables",
+    [
+        ("2023", "01", ["2m_temperature", "surface_pressure"]),
+        ("2022", "12", ["10m_u_component_of_wind"]),
+    ],
+)
+def test_monthly_orchestrator(monkeypatch, tmp_path, year, month, variables):
+    """
+    Ensures:
+    - monthly orchestrator loads variables/years/months from config.yml
+    - calls download_variable() for each (variable, year, month)
+    - per-variable GRIB + metadata files are created (normalized)
+    """
 
-def validate_directories() -> None:
-    paths = Paths()
-    for d in [paths.raw_dir, paths.metadata_dir, paths.config_dir]:
-        Path(d).mkdir(parents=True, exist_ok=True)
+    # --------------------------------------------------------------------------
+    # Monkeypatch environment
+    # --------------------------------------------------------------------------
+    monkeypatch.setenv("CDSAPI_URL", "https://fake-url")
+    monkeypatch.setenv("CDSAPI_KEY", "fake-key")
 
+    # --------------------------------------------------------------------------
+    # Monkeypatch Paths used by monthly orchestrator and single downloader
+    # --------------------------------------------------------------------------
+    class FakePaths:
+        def __init__(self):
+            self.raw_dir = tmp_path / "raw" / "era5"
+            self.metadata_dir = tmp_path / "metadata"
+            self.config_dir = tmp_path / "config"
 
-# ---------------------------------------------------------------------
-# Environment validation
-# ---------------------------------------------------------------------
-
-def validate_environment() -> None:
-    validate_directories()
-
-    if "CDSAPI_URL" not in os.environ or "CDSAPI_KEY" not in os.environ:
-        raise EnvironmentError("Missing CDS credentials")
-
-
-# ---------------------------------------------------------------------
-# Config validation
-# ---------------------------------------------------------------------
-
-def validate_config() -> bool:
-    paths = Paths()
-    config_file = Path(paths.config_dir) / "config.json"
-
-    if not config_file.exists():
-        logger.warning(f"[stage1] Missing config.json at {config_file}")
-        return False
-
-    try:
-        json.loads(config_file.read_text())
-        return True
-    except Exception:
-        return False
-
-
-# ---------------------------------------------------------------------
-# Retry wrapper
-# ---------------------------------------------------------------------
-
-def download_with_retry(request: dict, outfile: Path) -> Optional[Path]:
-    max_attempts = 3
-    delay = 1
-
-    for attempt in range(1, max_attempts + 1):
-        try:
-            logger.info(f"[stage1] Attempt {attempt}: downloading → {outfile}")
-            client.retrieve("reanalysis-era5-single-levels", request, str(outfile))
-            return outfile
-        except Exception as e:
-            logger.error(f"[stage1] Download failed (attempt {attempt}): {e}")
-            time.sleep(delay)
-            delay *= 2
-
-    logger.error(f"[stage1] Exhausted retries for {outfile}")
-    return None
-
-
-# ---------------------------------------------------------------------
-# Monthly download
-# ---------------------------------------------------------------------
-
-def download_month(year: str, month: str) -> Optional[Path]:
-    logger.info(f"[stage1] Branch 2 monthly download start: {year}-{month}")
-
-    validate_environment()
-    validate_directories()
-    config_ok = validate_config()
-
-    paths = Paths()
-    variables = load_variables()
-
-    outfile = Path(paths.raw_dir) / f"era5_{year}_{month}.zip"
-
-    request = {
-        "product_type": "reanalysis",
-        "format": "zip",
-        "variable": variables,
-        "year": year,
-        "month": month,
-        "day": [f"{d:02d}" for d in range(1, 32)],
-        "time": [f"{h:02d}:00" for h in range(24)],
-    }
-
-    result = download_with_retry(request, outfile)
-
-    metadata_path = Path(paths.metadata_dir) / f"metadata_{year}_{month}.json"
-    metadata_path.write_text(
-        json.dumps(
-            {
-                "year": year,
-                "month": month,
-                "success": result is not None,
-                "config_valid": config_ok,
-            }
-        )
+    monkeypatch.setattr(
+        "src.download_01.download_era5_monthly.Paths",
+        FakePaths
+    )
+    monkeypatch.setattr(
+        "src.download_01.download_era5_single.Paths",
+        FakePaths
     )
 
-    return result
+    # --------------------------------------------------------------------------
+    # Fake config.yml (Branch 2 uses YAML)
+    # --------------------------------------------------------------------------
+    config_file = tmp_path / "config" / "config.yml"
+    config_file.parent.mkdir(parents=True, exist_ok=True)
+    config_file.write_text(
+        f"years: [{year}]\nmonths: [{int(month)}]\nvariables: {variables}"
+    )
 
+    # --------------------------------------------------------------------------
+    # Monkeypatch config loaders
+    # --------------------------------------------------------------------------
+    monkeypatch.setattr(
+        "src.download_01.download_era5_monthly.load_variables",
+        lambda: variables
+    )
+    monkeypatch.setattr(
+        "src.download_01.download_era5_monthly.load_years",
+        lambda: [year]
+    )
+    monkeypatch.setattr(
+        "src.download_01.download_era5_monthly.load_months",
+        lambda: [month]
+    )
 
-# ---------------------------------------------------------------------
-# CLI entrypoint
-# ---------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    # Monkeypatch download_variable() to simulate GRIB + metadata creation
+    # --------------------------------------------------------------------------
+    calls = []
 
-def main():
-    years = load_years()
-    months = load_months()
+    def fake_download_variable(var, yr, mo):
+        calls.append((var, yr, mo))
 
-    for year in years:
-        for month in months:
-            download_month(year, month)
+        norm = NORMALIZED[var]
 
+        # Simulate GRIB file (normalized)
+        grib = (
+            tmp_path
+            / "raw"
+            / "era5"
+            / yr
+            / mo
+            / norm
+            / f"{norm}_{yr}_{mo}.grib"
+        )
+        grib.parent.mkdir(parents=True, exist_ok=True)
+        grib.write_text("fake grib")
 
-if __name__ == "__main__":
-    main()
+        # Simulate metadata file
+        metadata = (
+            tmp_path
+            / "metadata"
+            / f"metadata_{var}_{yr}_{mo}.json"
+        )
+        metadata.write_text(json.dumps({
+            "variable": var,
+            "year": yr,
+            "month": mo,
+            "outfile": str(grib),
+            "success": True,
+            "config_valid": True,
+        }))
+
+        return grib
+
+    monkeypatch.setattr(
+        "src.download_01.download_era5_monthly.download_variable",
+        fake_download_variable
+    )
+
+    # --------------------------------------------------------------------------
+    # Execute monthly orchestrator
+    # --------------------------------------------------------------------------
+    monthly_main()
+
+    # --------------------------------------------------------------------------
+    # Validate delegation
+    # --------------------------------------------------------------------------
+    expected_calls = [(v, year, f"{int(month):02d}") for v in variables]
+    assert calls == expected_calls
+
+    # --------------------------------------------------------------------------
+    # Validate per-variable GRIB + metadata (normalized)
+    # --------------------------------------------------------------------------
+    for var in variables:
+        norm = NORMALIZED[var]
+
+        grib = (
+            tmp_path
+            / "raw"
+            / "era5"
+            / year
+            / f"{int(month):02d}"
+            / norm
+            / f"{norm}_{year}_{int(month):02d}.grib"
+        )
+        assert grib.exists()
+
+        metadata = (
+            tmp_path
+            / "metadata"
+            / f"metadata_{var}_{year}_{int(month):02d}.json"
+        )
+        assert metadata.exists()

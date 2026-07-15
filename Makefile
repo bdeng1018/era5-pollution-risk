@@ -2,36 +2,52 @@
 # ERA5 Pollution Risk Pipeline — Branch 2
 # Makefile for running pipeline stages in correct sequence.
 #
-# IMPORTANT — CDS API Credentials (required for Stage 01)
+# CDS API Credentials (Required for Stage 1)
 # ------------------------------------------------------------------------------
-# ERA5 downloads require valid CDS API credentials stored in shell environment:
+# ERA5 downloads require valid CDS API credentials exported in your shell:
 #
 #   export CDSAPI_URL="https://cds.climate.copernicus.eu/api"
 #   export CDSAPI_KEY="<your-key-here>"
 #
-# Add these lines to ~/.zshrc (macOS default) or ~/.bashrc if using bash.
-# Reload your shell:
+# Add these lines to ~/.zshrc (macOS) or ~/.bashrc (bash), then reload:
 #
 #   source ~/.zshrc
 #
-# Verify:
+# Verify credentials:
 #
-#   echo $$CDSAPI_URL
-#   echo $$CDSAPI_KEY
+#   echo $CDSAPI_URL
+#   echo $CDSAPI_KEY
 #
-# Without these variables, Stage 01 (download) will fail.
+# Without these variables, Stage 1 (download) will fail immediately.
 #
-# Branch 2 status:
-#   ✓ Stage 1 (Download) complete
-#   ✓ Stage 1 metadata + retry logic complete
-#   ✓ Stage 1 test suite complete
-#   ✓ Stage 2 unzip/inspect/convert modules complete
-#   ✓ Stage 2 test suite complete
-#   ✓ Stage 3 chunked core processing modules complete
-#   → Stage 3 orchestration via ChunkOrchestrator
+# Branch 2 Status Summary
+# ------------------------------------------------------------------------------
+#   ✓ Stage 1: GRIB-only ERA5 download (monthly + single-variable)
+#   ✓ Stage 1: Metadata, retry logic, and full test suite
+#
+#   ✓ Stage 2: unzip / inspect / convert modules complete
+#   ✓ Stage 2: Full test suite and pipeline orchestration
+#
+#   ✓ Stage 3: Chunked core processing modules complete
+#   ✓ Stage 3: Orchestration via ChunkOrchestrator
+#
+#   ✓ Stage 4: Spatiotemporal compiler implemented
+#       (grid → mask → temporal_align → temporal_interpolate → qc → metadata → tensor_builder)
+#
+#   (Stage 5: Feature engineering — planned)
+#   (Stage 6: Dataset assembly + modeling — planned)
+#   (Stage 7: Evaluation + inference — planned)
+#   (Stage 8: Deployment — reserved for Branch 3)
+#
+# Notes
+# ------------------------------------------------------------------------------
+# - This Makefile provides a clean, reproducible interface for running each
+#   pipeline stage individually or end-to-end.
+# - Targets are intentionally simple and shell-friendly.
+# - Branch 3 will introduce deployment targets (docker, fastapi, mlflow).
 # ==============================================================================
 
-.PHONY: env download preprocess core features train evaluate test all clean-cache clean-pyc
+.PHONY: env download preprocess core spatiotemporal features train evaluate test all clean-cache clean-pyc clean-idx clean-intermediate
 
 # ------------------------------------------------------------------------------
 # Stage 00 — Environment validation
@@ -49,31 +65,53 @@ download: env
 # Stage 02 — Preprocessing (Branch 2)
 # ------------------------------------------------------------------------------
 preprocess: download
+    # Clean stale eccodes index files BEFORE preprocessing
+	make clean-idx
+
+    # Clean Python caches BEFORE Stage 2
+	make clean-cache
+
 	python -m src.preprocessing_02.run_preprocessing --config configs/config.yml
+
+    # Clean stale eccodes index files AFTER preprocessing
+	make clean-idx
+
+    # Clean Python caches AFTER Stage 2
+	make clean-cache
 
 # ------------------------------------------------------------------------------
 # Stage 03 — Chunked Core Processing (Branch 2)
 # ------------------------------------------------------------------------------
 core: preprocess
-	python -m src.core_03.chunk_orchestrator --config configs/config.yml
+    # Clear caches BEFORE Stage 3 (double safety)
+	make clean-cache
+
+	python -m src.core_03 --config configs/config.yml
 
 # ------------------------------------------------------------------------------
-# Stage 04 — Feature Engineering (Branch 1 baseline)
+# Stage 04 — Spatiotemporal Compiler (Branch 2)
+# Note: Stage 4 is pure library code; no cache cleanup required.
 # ------------------------------------------------------------------------------
-features: core
-	python -m src.features_03.build_features
+spatiotemporal: core
+	python -m src.spatiotemporal_04.driver --config configs/config.yml
 
 # ------------------------------------------------------------------------------
-# Stage 05 — Modeling (Branch 1 baseline)
+# Stage 05 — Features (Branch 2 -- NOT Implemented Yet)
 # ------------------------------------------------------------------------------
-train: features
-	python -m src.modeling_04.train_model
+features:
+	@echo "Stage 5 features is not yet implemented in Branch 2."
 
 # ------------------------------------------------------------------------------
-# Stage 06 — Evaluation (Branch 1 baseline)
+# Stage 06 — Modeling (Branch 2 -- NOT Implemented Yet)
 # ------------------------------------------------------------------------------
-evaluate: train
-	python -m src.evaluation_05.evaluate_model
+train:
+	@echo "Stage 6 modeling is not yet implemented in Branch 2."
+
+# ------------------------------------------------------------------------------
+# Stage 07 — Evaluation (Branch 2 -- NOT Implemented Yet)
+# ------------------------------------------------------------------------------
+evaluate:
+	@echo "Stage 7 evaluation is not yet implemented in Branch 2."
 
 # ------------------------------------------------------------------------------
 # Run all tests (Branch 2)
@@ -82,17 +120,10 @@ test:
 	pytest -q
 
 # ------------------------------------------------------------------------------
-# Full pipeline (Stages 01 → 06)
+# Full pipeline (Stages 01 → 07)
 # ------------------------------------------------------------------------------
-all: download preprocess core features train evaluate
-
-# ------------------------------------------------------------------------------
-# Branch 2 only (Stages 01 → 03)
-# ------------------------------------------------------------------------------
-branch2:
-	make download
-	make preprocess
-	make core
+all: download preprocess core spatiotemporal
+	@echo "Stages 5–7 are not yet implemented in Branch 2."
 
 # ------------------------------------------------------------------------------
 # Clean Python caches (pyc + __pycache__ + pytest cache)
@@ -108,3 +139,18 @@ clean-cache:
 clean-pyc:
 	find . -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -exec rm -rf {} +
+
+# ------------------------------------------------------------------------------
+# Manual cleanup of stale eccodes index files
+# ------------------------------------------------------------------------------
+clean-idx:
+	find data/raw/era5 -name "*.idx" -delete
+
+# ------------------------------------------------------------------------------
+# Clean intermediate data (intermediate, chunks, chunks_metadata, spatiotemporal)
+# ------------------------------------------------------------------------------
+clean-intermediate: clean-cache clean-pyc clean-idx
+	rm -rf data/intermediate/*
+	rm -rf data/chunks/*.parquet
+	rm -rf data/chunks_metadata/*.json
+	rm -rf data/spatiotemporal/*

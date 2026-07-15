@@ -39,6 +39,9 @@ Branch 2 introduces full validation tests in separate files:
 - regression tests for future stability
 """
 
+import importlib
+
+
 def test_stage2_smoke_imports():
     """
     Smoke test: ensure Stage 2 preprocessing modules import without crashing.
@@ -53,4 +56,5 @@ def test_stage2_smoke_imports():
     ]
 
     for module in modules:
-        __import__(module)
+        imported = importlib.import_module(module)
+        assert imported is not None, f"Failed to import {module}"

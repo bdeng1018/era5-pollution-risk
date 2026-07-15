@@ -1,14 +1,33 @@
 """
-ERA5 pipeline source package (Branch 2).
+ERA5 Pollution Risk Pipeline — Branch 2
+=======================================
 
-This initializer intentionally defines no imports or execution logic.
-Keeping this file empty ensures:
+This package initializer is intentionally empty.
 
-- clean namespace resolution for all pipeline stages
-- predictable behavior during `python -m` execution
-- fast, side‑effect‑free pytest discovery
-- no accidental loading of heavy modules during Stage 1–3
+Purpose
+-------
+The `src/` package defines the top‑level namespace for all pipeline stages
+(Stage 1–4). To keep import behavior predictable and test‑friendly, this file
+must not import any modules or perform any side effects.
 
-Branch 2 modules import only what they need, when they need it.
-This file exists solely to mark `src/` as a Python package.
+Design Goals
+------------
+- Preserve stable namespace resolution across all pipeline stages.
+- Avoid importing heavy dependencies (xarray, numpy, eccodes) at package load.
+- Ensure `python -m` execution works cleanly for all stage drivers.
+- Prevent side effects during pytest collection, especially for Stage 1–4.
+- Mark `src/` as a Python package without altering import semantics.
+
+Branch 2 Architecture
+---------------------
+- Stage 1: ERA5 download (GRIB‑only ingestion)
+- Stage 2: preprocessing (unzip → inspect → convert → metadata)
+- Stage 3: chunked core processing (parallelized merge)
+- Stage 4: spatiotemporal compiler
+    - grid → mask → temporal_align → temporal_interpolate → qc → metadata → tensor_builder
+
+Invariant
+---------
+Each module imports only what it needs, when it needs it.
+This file must remain empty to preserve that invariant.
 """
