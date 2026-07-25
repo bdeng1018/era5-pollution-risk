@@ -76,7 +76,9 @@ def inspect_grib(grib_path: Path):
 
     # Branch 1: enforce single-variable rule
     if not is_single_variable_grib(grib_path):
-        logger.warning(f"Skipping non-single-variable GRIB (Branch 1): {grib_path.name}")
+        logger.warning(
+            f"Skipping non-single-variable GRIB (Branch 1): {grib_path.name}"
+        )
         return None
 
     # Minimal open
@@ -106,8 +108,7 @@ def main():
 
     # Find only single-variable GRIBs
     single_var_gribs = sorted(
-        p for p in era5_dir.glob("*.grib")
-        if is_single_variable_grib(p)
+        p for p in era5_dir.glob("*.grib") if is_single_variable_grib(p)
     )
 
     if not single_var_gribs:

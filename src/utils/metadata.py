@@ -50,6 +50,4 @@ def write_metadata(output_path: str | Path, info: dict) -> None:
         with open(p, "w") as f:
             json.dump(info, f, indent=2)
     except TypeError as e:
-        raise TypeError(
-            f"Metadata contains non‑serializable values: {e}"
-        )
+        raise TypeError(f"Metadata contains non‑serializable values: {e}")
