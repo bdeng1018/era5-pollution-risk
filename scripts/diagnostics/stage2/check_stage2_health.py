@@ -51,7 +51,6 @@ import json
 import random
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
 
 import pandas as pd
 
@@ -69,7 +68,8 @@ REQUIRED_COORDS = {"latitude", "longitude", "valid_time"}
 # Directory-First Sampling
 # ------------------------------------------------------------------------------
 
-def list_stage2_directories(root: Path) -> List[Path]:
+
+def list_stage2_directories(root: Path) -> list[Path]:
     dirs = []
     for year_dir in root.iterdir():
         if not year_dir.is_dir():
@@ -83,19 +83,19 @@ def list_stage2_directories(root: Path) -> List[Path]:
     return dirs
 
 
-def sample_directories(dirs: List[Path], pct: float) -> List[Path]:
+def sample_directories(dirs: list[Path], pct: float) -> list[Path]:
     n = max(1, int(len(dirs) * (pct / 100.0)))
     return random.sample(dirs, n)
 
 
-def list_parquet_in_dirs(dirs: List[Path]) -> List[Path]:
+def list_parquet_in_dirs(dirs: list[Path]) -> list[Path]:
     files = []
     for d in dirs:
         files.extend(d.glob("*.parquet"))
     return files
 
 
-def sample_files(files: List[Path], pct: float) -> List[Path]:
+def sample_files(files: list[Path], pct: float) -> list[Path]:
     n = max(1, int(len(files) * (pct / 100.0)))
     return random.sample(files, n)
 
@@ -104,14 +104,15 @@ def sample_files(files: List[Path], pct: float) -> List[Path]:
 # Parquet Checks
 # ------------------------------------------------------------------------------
 
-def read_parquet_safe(path: Path) -> Optional[pd.DataFrame]:
+
+def read_parquet_safe(path: Path) -> pd.DataFrame | None:
     try:
         return pd.read_parquet(path)
     except Exception:
         return None
 
 
-def check_required_columns(df: pd.DataFrame) -> Set[str]:
+def check_required_columns(df: pd.DataFrame) -> set[str]:
     missing = set()
 
     for col in ["latitude", "longitude"]:
@@ -124,12 +125,20 @@ def check_required_columns(df: pd.DataFrame) -> Set[str]:
     return missing
 
 
-def detect_variable_columns(df: pd.DataFrame) -> Set[str]:
-    ignore = {"latitude", "longitude", "time", "valid_time", "number", "step", "surface"}
+def detect_variable_columns(df: pd.DataFrame) -> set[str]:
+    ignore = {
+        "latitude",
+        "longitude",
+        "time",
+        "valid_time",
+        "number",
+        "step",
+        "surface",
+    }
     return set(df.columns) - ignore
 
 
-def diagnose_single_file(path: Path) -> Optional[Tuple[Path, str]]:
+def diagnose_single_file(path: Path) -> tuple[Path, str] | None:
     df = read_parquet_safe(path)
     if df is None:
         return (path, "Unreadable parquet file")
@@ -155,7 +164,8 @@ def diagnose_single_file(path: Path) -> Optional[Tuple[Path, str]]:
 # Metadata Checks (Key‑Indexed Schema)
 # ------------------------------------------------------------------------------
 
-def load_metadata() -> Optional[Dict]:
+
+def load_metadata() -> dict | None:
     if not METADATA_PATH.exists():
         return None
     try:
@@ -165,14 +175,14 @@ def load_metadata() -> Optional[Dict]:
         return None
 
 
-def parse_metadata_key(key: str) -> Tuple[str, str]:
+def parse_metadata_key(key: str) -> tuple[str, str]:
     if "::" not in key:
         raise ValueError(f"Malformed metadata key: {key}")
     ts, var = key.split("::", 1)
     return ts, var
 
 
-def diagnose_metadata_consistency() -> List[str]:
+def diagnose_metadata_consistency() -> list[str]:
     issues = []
     metadata = load_metadata()
     if metadata is None:
@@ -203,7 +213,7 @@ def diagnose_metadata_consistency() -> List[str]:
     return issues
 
 
-def diagnose_timestamp_alignment() -> List[str]:
+def diagnose_timestamp_alignment() -> list[str]:
     issues = []
     metadata = load_metadata()
     if metadata is None:
@@ -230,7 +240,8 @@ def diagnose_timestamp_alignment() -> List[str]:
 # Parallel Diagnostic
 # ------------------------------------------------------------------------------
 
-def parallel_diagnose(paths: List[Path]) -> List[Tuple[Path, str]]:
+
+def parallel_diagnose(paths: list[Path]) -> list[tuple[Path, str]]:
     with Pool(cpu_count()) as pool:
         results = pool.map(diagnose_single_file, paths)
     return [r for r in results if r is not None]
@@ -240,12 +251,18 @@ def parallel_diagnose(paths: List[Path]) -> List[Tuple[Path, str]]:
 # Main Entry Point
 # ------------------------------------------------------------------------------
 
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--pct", type=float, default=None,
-                        help="Optional: sample N% of parquet files (0.01–99.99).")
-    parser.add_argument("--parallel", action="store_true",
-                        help="Enable parallel scanning")
+    parser.add_argument(
+        "--pct",
+        type=float,
+        default=None,
+        help="Optional: sample N% of parquet files (0.01–99.99).",
+    )
+    parser.add_argument(
+        "--parallel", action="store_true", help="Enable parallel scanning"
+    )
     args = parser.parse_args()
 
     print("=== Stage 2 Health Diagnostic (Key‑Indexed Metadata Schema) ===\n")
@@ -278,7 +295,9 @@ def main() -> None:
         parquet_issues = parallel_diagnose(sampled_files)
     else:
         print("Running single-threaded diagnostic...\n")
-        parquet_issues = [r for r in map(diagnose_single_file, sampled_files) if r is not None]
+        parquet_issues = [
+            r for r in map(diagnose_single_file, sampled_files) if r is not None
+        ]
 
     metadata_issues = diagnose_metadata_consistency()
     timestamp_issues = diagnose_timestamp_alignment()

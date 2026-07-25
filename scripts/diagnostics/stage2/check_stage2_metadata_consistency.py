@@ -51,7 +51,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import pandas as pd
 
@@ -62,7 +61,8 @@ METADATA_PATH = Path("data/metadata/metadata.json")
 # Helpers
 # ------------------------------------------------------------------------------
 
-def load_metadata() -> Dict:
+
+def load_metadata() -> dict:
     """Load metadata.json and return dict."""
     if not METADATA_PATH.exists():
         raise FileNotFoundError("❌ metadata.json missing")
@@ -86,7 +86,7 @@ def parquet_readable(path: str) -> bool:
         return False
 
 
-def parse_key(key: str) -> Tuple[str, str]:
+def parse_key(key: str) -> tuple[str, str]:
     """Parse '<timestamp>::<variable>' key."""
     if "::" not in key:
         raise ValueError(f"Malformed metadata key: {key}")
@@ -98,8 +98,11 @@ def parse_key(key: str) -> Tuple[str, str]:
 # Main Diagnostic
 # ------------------------------------------------------------------------------
 
+
 def main():
-    print("=== Stage 2 Metadata Consistency Diagnostic (Key‑Indexed Schema, ERA5‑Correct) ===\n")
+    print(
+        "=== Stage 2 Metadata Consistency Diagnostic (Key‑Indexed Schema, ERA5‑Correct) ===\n"
+    )
 
     metadata = load_metadata()
 
@@ -124,7 +127,15 @@ def main():
         variables.add(var)
 
         # Required fields
-        required_fields = ["timestamp", "variable", "path", "year", "month", "dtype", "shape"]
+        required_fields = [
+            "timestamp",
+            "variable",
+            "path",
+            "year",
+            "month",
+            "dtype",
+            "shape",
+        ]
         missing = [f for f in required_fields if f not in entry]
         if missing:
             print(f"❌ Missing fields in entry {key}: {missing}")

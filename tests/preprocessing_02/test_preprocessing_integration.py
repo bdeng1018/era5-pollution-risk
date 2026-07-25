@@ -29,6 +29,7 @@ import importlib
 # Integration Test — unzip → inspect
 # ==============================================================================
 
+
 def test_unzip_then_inspect_structural():
     unzip = importlib.import_module("src.preprocessing_02.unzip_grib")
     inspect = importlib.import_module("src.preprocessing_02.inspect_grib")
@@ -42,6 +43,7 @@ def test_unzip_then_inspect_structural():
 # ==============================================================================
 # Integration Test — inspect → convert
 # ==============================================================================
+
 
 def test_inspect_then_convert_structural():
     inspect = importlib.import_module("src.preprocessing_02.inspect_grib")
@@ -57,6 +59,7 @@ def test_inspect_then_convert_structural():
 # Integration Test — unzip → inspect → convert
 # ==============================================================================
 
+
 def test_full_stage2_chain_structural():
     unzip = importlib.import_module("src.preprocessing_02.unzip_grib")
     inspect = importlib.import_module("src.preprocessing_02.inspect_grib")
@@ -71,6 +74,7 @@ def test_full_stage2_chain_structural():
 # Integration Test — run_preprocessing orchestrator
 # ==============================================================================
 
+
 def test_run_preprocessing_structural():
     rp = importlib.import_module("src.preprocessing_02.run_preprocessing")
 
@@ -82,8 +86,10 @@ def test_run_preprocessing_structural():
 # Integration Test — Ensure no heavy imports occur
 # ==============================================================================
 
+
 def test_no_heavy_imports_in_stage2():
     import sys
+
     banned = ["cfgrib", "eccodes"]
     for name in banned:
         assert name not in sys.modules

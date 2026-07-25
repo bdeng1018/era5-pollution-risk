@@ -18,8 +18,6 @@ Worker writes metadata to:
     metadata_dir / f"{chunk_id}.json"
 """
 
-from pathlib import Path
-
 import pandas as pd
 
 from src.core_03.chunk_orchestrator import ChunkOrchestrator
@@ -38,27 +36,31 @@ def test_orchestrator_smoke(tmp_path):
     """
 
     # Schema is NOT used by orchestrator, but test keeps it for completeness
-    schema = ChunkSchema({
-        "schema": {
-            "columns": ["time", "lat", "lon", "t2m"],
-            "dtypes": {
-                "time": "string",
-                "lat": "float64",
-                "lon": "float64",
-                "t2m": "float64",
-            },
-            "version": "1.0",
+    schema = ChunkSchema(
+        {
+            "schema": {
+                "columns": ["time", "lat", "lon", "t2m"],
+                "dtypes": {
+                    "time": "string",
+                    "lat": "float64",
+                    "lon": "float64",
+                    "t2m": "float64",
+                },
+                "version": "1.0",
+            }
         }
-    })
+    )
 
     # Create input parquet
     input_path = tmp_path / "in.parquet"
-    df = pd.DataFrame({
-        "time": ["2023-09-01T00:00"],
-        "lat": [34.0],
-        "lon": [-118.0],
-        "t2m": [280.0],
-    })
+    df = pd.DataFrame(
+        {
+            "time": ["2023-09-01T00:00"],
+            "lat": [34.0],
+            "lon": [-118.0],
+            "t2m": [280.0],
+        }
+    )
     df.to_parquet(input_path)
 
     chunk_id = "t2m_2023-09-01T00:00_24hr"

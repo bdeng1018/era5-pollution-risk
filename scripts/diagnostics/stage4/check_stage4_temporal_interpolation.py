@@ -34,11 +34,12 @@ import xarray as xr
 # Utility functions
 # ------------------------------------------------------------------------------
 
+
 def _count_interpolated_timestamps(original_time, aligned_time):
     """Count timestamps added during interpolation."""
     original_set = set(original_time.tolist())
     aligned_set = set(aligned_time.tolist())
-    return int(len(aligned_set - original_set))
+    return len(aligned_set - original_set)
 
 
 def _compute_interpolated_fraction(original_time, aligned_time):
@@ -93,6 +94,7 @@ def _detect_plateaus(arr: np.ndarray, length: int = 3) -> int:
 # Diagnostic entry point
 # ------------------------------------------------------------------------------
 
+
 def run_temporal_interpolation_diagnostic(dataset_path: str, output_path: str) -> None:
     """
     Run Stage 4 temporal interpolation diagnostic.
@@ -118,7 +120,9 @@ def run_temporal_interpolation_diagnostic(dataset_path: str, output_path: str) -
     missing = [k for k in required if k not in ds.attrs]
 
     if missing:
-        raise ValueError(f"[Stage 4][interp_diag] Missing required original_time attrs: {missing}")
+        raise ValueError(
+            f"[Stage 4][interp_diag] Missing required original_time attrs: {missing}"
+        )
 
     orig_min = np.datetime64(ds.attrs["original_time_min"])
     orig_max = np.datetime64(ds.attrs["original_time_max"])
@@ -170,9 +174,8 @@ def run_temporal_interpolation_diagnostic(dataset_path: str, output_path: str) -
         per_variable_nan_after_interp[var] = nan_after_interp
 
     # Pass criteria
-    interp_pass = (
-        interpolated_fraction < 0.10  # less than 10% interpolated
-        and all(v == 0 for v in per_variable_nan_after_interp.values())
+    interp_pass = interpolated_fraction < 0.10 and all(  # less than 10% interpolated
+        v == 0 for v in per_variable_nan_after_interp.values()
     )
 
     # --------------------------------------------------------------------------
@@ -205,7 +208,9 @@ def run_temporal_interpolation_diagnostic(dataset_path: str, output_path: str) -
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Stage 4 Temporal Interpolation Diagnostic")
+    parser = argparse.ArgumentParser(
+        description="Stage 4 Temporal Interpolation Diagnostic"
+    )
     parser.add_argument(
         "--dataset",
         type=str,

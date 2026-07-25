@@ -68,14 +68,17 @@ def test_stage2_acceptance_pipeline_outputs(tmp_path, monkeypatch):
     log_path = os.path.join(p.logs_dir, log_files[0])
     with open(log_path, "r") as lf:
         content = lf.read()
-    assert "[stage2]" in content or "run_preprocessing" in content, \
+    assert "[stage2]" in content or "run_preprocessing" in content, (
         "Stage 2 acceptance test: log file missing expected startup content"
+    )
 
     # Validate metadata directory contains metadata.json
     metadata_file = os.path.join(p.metadata_dir, "metadata.json")
-    assert os.path.isfile(metadata_file), \
+    assert os.path.isfile(metadata_file), (
         "Stage 2 acceptance test: metadata.json missing from metadata directory"
+    )
 
     # Validate metadata.json is at least initialized (non-empty file)
-    assert os.path.getsize(metadata_file) > 0, \
+    assert os.path.getsize(metadata_file) > 0, (
         "Stage 2 acceptance test: metadata.json is empty"
+    )

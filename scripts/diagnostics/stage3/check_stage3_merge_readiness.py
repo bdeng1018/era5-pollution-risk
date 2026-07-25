@@ -43,7 +43,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
 
 import pandas as pd
 
@@ -53,22 +52,33 @@ METADATA_PATH = Path("data/metadata/metadata.json")
 CHUNK_DIR = Path("data/chunks")
 
 INSTANT_VARS = {
-    "blh", "cape", "cin", "d2m", "msl", "sp",
-    "t2m", "tcc", "tco3", "tcwv", "u10", "v10",
+    "blh",
+    "cape",
+    "cin",
+    "d2m",
+    "msl",
+    "sp",
+    "t2m",
+    "tcc",
+    "tco3",
+    "tcwv",
+    "u10",
+    "v10",
 }
 
 # ------------------------------------------------------------------------------
 # Helpers — Key‑Indexed Metadata
 # ------------------------------------------------------------------------------
 
-def load_metadata() -> Dict:
+
+def load_metadata() -> dict:
     if not METADATA_PATH.exists():
         raise FileNotFoundError("❌ metadata.json missing")
     with open(METADATA_PATH, "r") as f:
         return json.load(f)
 
 
-def get_all_timestamps(metadata: Dict) -> List[str]:
+def get_all_timestamps(metadata: dict) -> list[str]:
     """Extract all timestamps from key‑indexed metadata."""
     ts_list = []
     for key, entry in metadata.items():
@@ -76,7 +86,7 @@ def get_all_timestamps(metadata: Dict) -> List[str]:
     return sorted(set(ts_list))
 
 
-def get_parquets_for_variable(metadata: Dict, var: str) -> List[str]:
+def get_parquets_for_variable(metadata: dict, var: str) -> list[str]:
     """Return ALL parquet paths for a variable."""
     paths = []
     for key, entry in metadata.items():
@@ -85,7 +95,7 @@ def get_parquets_for_variable(metadata: Dict, var: str) -> List[str]:
     return paths
 
 
-def get_one_parquet_for_variable(metadata: Dict, var: str) -> Optional[str]:
+def get_one_parquet_for_variable(metadata: dict, var: str) -> str | None:
     """Return ONE parquet path for a variable."""
     for key, entry in metadata.items():
         if entry.get("variable") == var:
@@ -97,7 +107,8 @@ def get_one_parquet_for_variable(metadata: Dict, var: str) -> Optional[str]:
 # Stage 3 chunk loader
 # ------------------------------------------------------------------------------
 
-def load_stage3_chunk(var: str, ts: str) -> Optional[pd.DataFrame]:
+
+def load_stage3_chunk(var: str, ts: str) -> pd.DataFrame | None:
     safe_ts = ts.replace(":", "-")
     path = CHUNK_DIR / f"{var}_{safe_ts}_12hr.parquet"
     if not path.exists():
@@ -112,7 +123,8 @@ def load_stage3_chunk(var: str, ts: str) -> Optional[pd.DataFrame]:
 # Timestamp coverage
 # ------------------------------------------------------------------------------
 
-def check_timestamp_coverage(metadata: Dict):
+
+def check_timestamp_coverage(metadata: dict):
     issues = []
 
     full_ts = get_all_timestamps(metadata)
@@ -140,6 +152,7 @@ def check_timestamp_coverage(metadata: Dict):
 # ------------------------------------------------------------------------------
 # Stage 3 grid alignment
 # ------------------------------------------------------------------------------
+
 
 def check_grid_alignment():
     issues = []
@@ -175,8 +188,11 @@ def check_grid_alignment():
 # Main diagnostic
 # ------------------------------------------------------------------------------
 
+
 def main():
-    print("=== Stage 3 Merge Readiness Diagnostic (ERA5‑Correct, Branch‑2‑Correct) ===\n")
+    print(
+        "=== Stage 3 Merge Readiness Diagnostic (ERA5‑Correct, Branch‑2‑Correct) ===\n"
+    )
 
     metadata = load_metadata()
 

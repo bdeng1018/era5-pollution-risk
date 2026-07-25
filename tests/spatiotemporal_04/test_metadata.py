@@ -11,7 +11,7 @@ Purpose:
 
 import numpy as np
 
-import src.spatiotemporal_04.metadata as metadata
+from src.spatiotemporal_04 import metadata
 
 
 def test_metadata_build_basic():
@@ -46,13 +46,10 @@ def test_metadata_build_basic():
         "spatial_jumps": {},
     }
 
-
     temporal_meta = {
         "aligned_time": np.array(
-            ["2020-01-01T00:00",
-             "2020-01-01T01:00",
-             "2020-01-01T02:00"],
-            dtype="datetime64[ns]"
+            ["2020-01-01T00:00", "2020-01-01T01:00", "2020-01-01T02:00"],
+            dtype="datetime64[ns]",
         ),
         "frequency": "1H",
         "missing_timestamps": [],

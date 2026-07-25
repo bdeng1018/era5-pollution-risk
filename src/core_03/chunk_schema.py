@@ -40,7 +40,7 @@ ChunkSchema ensures:
     • reproducible chunk outputs
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 
 class ChunkSchema:
@@ -53,19 +53,19 @@ class ChunkSchema:
         • provide validation helpers
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         schema_cfg = config.get("schema", {})
 
         # Full deterministic column order exactly as provided
-        self.columns: List[str] = schema_cfg.get("columns", [])
+        self.columns: list[str] = schema_cfg.get("columns", [])
 
         # Variable column = all non-coordinate columns
-        self.variable_columns: List[str] = [
+        self.variable_columns: list[str] = [
             c for c in self.columns if c not in ["time", "lat", "lon"]
         ]
 
         # Dtypes exactly as provided
-        self.dtypes: Dict[str, str] = schema_cfg.get("dtypes", {})
+        self.dtypes: dict[str, str] = schema_cfg.get("dtypes", {})
 
         # Optional version
         self.version: str = schema_cfg.get("version", "1.0")
@@ -73,7 +73,7 @@ class ChunkSchema:
     # --------------------------------------------------------------------------
     # Validation helpers
     # --------------------------------------------------------------------------
-    def validate_columns(self, df_columns: List[str]) -> bool:
+    def validate_columns(self, df_columns: list[str]) -> bool:
         """
         Validate that df_columns matches the expected prefix of schema.columns.
 
@@ -83,9 +83,9 @@ class ChunkSchema:
 
         This allows minimal schemas in tests and full schemas in production.
         """
-        return df_columns == self.columns[:len(df_columns)]
+        return df_columns == self.columns[: len(df_columns)]
 
-    def validate_dtypes(self, df_dtypes: Dict[str, str]) -> bool:
+    def validate_dtypes(self, df_dtypes: dict[str, str]) -> bool:
         """
         Validate dtypes for columns present in df_dtypes.
 

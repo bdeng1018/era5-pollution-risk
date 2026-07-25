@@ -37,11 +37,13 @@ from eccodes import (
 # Helper: safe GRIB key getter
 # ------------------------------------------------------------------------------
 
+
 def _safe_get(handle, key):
     try:
         return codes_get(handle, key)
     except Exception:
         return None
+
 
 def _safe_get_array(handle, key):
     try:
@@ -49,9 +51,11 @@ def _safe_get_array(handle, key):
     except Exception:
         return None
 
+
 # ------------------------------------------------------------------------------
 # Main diagnostic
 # ------------------------------------------------------------------------------
+
 
 def run_stage1_grib_metadata(grib_path: str, output_path: str) -> None:
     print("[Stage 1][metadata_diag] Inspecting GRIB:", grib_path)
@@ -98,8 +102,10 @@ def run_stage1_grib_metadata(grib_path: str, output_path: str) -> None:
     lon_max = _safe_get(first_handle, "longitudeOfLastGridPointInDegrees")
 
     missing_keys = [
-        key for key in [
-            "Nj", "Ni",
+        key
+        for key in [
+            "Nj",
+            "Ni",
             "latitudeOfFirstGridPointInDegrees",
             "latitudeOfLastGridPointInDegrees",
             "longitudeOfFirstGridPointInDegrees",
@@ -114,11 +120,7 @@ def run_stage1_grib_metadata(grib_path: str, output_path: str) -> None:
     multi_variable = len(variables) > 1
 
     # Pass/fail
-    metadata_pass = (
-        message_count > 0 and
-        len(variables) > 0 and
-        len(missing_keys) == 0
-    )
+    metadata_pass = message_count > 0 and len(variables) > 0 and len(missing_keys) == 0
 
     # Build report
     report = {

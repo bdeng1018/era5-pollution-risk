@@ -37,7 +37,7 @@ Where spatial_contract contains:
     }
 """
 
-from typing import Dict, List, Mapping, Tuple, Union
+from collections.abc import Mapping
 
 import numpy as np
 import xarray as xr
@@ -46,6 +46,7 @@ import xarray as xr
 # Utility checks
 # ------------------------------------------------------------------------------
 
+
 def _assert_coordinate_exists(ds: xr.Dataset, name: str) -> None:
     if name not in ds.coords:
         raise ValueError(f"[Stage 4][grid] Missing coordinate '{name}'")
@@ -53,7 +54,7 @@ def _assert_coordinate_exists(ds: xr.Dataset, name: str) -> None:
 
 def _is_strictly_ascending(arr: np.ndarray) -> bool:
     """Return True if array is strictly ascending."""
-    return bool(np.all(np.diff(arr) > 0))   # <-- FIX: cast numpy.bool_ → bool
+    return bool(np.all(np.diff(arr) > 0))  # <-- FIX: cast numpy.bool_ → bool
 
 
 def _compute_spacing(arr: np.ndarray) -> float:
@@ -65,12 +66,13 @@ def _detect_spacing_irregularity(arr: np.ndarray) -> bool:
     diffs = np.diff(arr)
     if diffs.size == 0:
         return False
-    return bool(np.std(diffs) > 1e-6)       # <-- FIX: cast numpy.bool_ → bool
+    return bool(np.std(diffs) > 1e-6)  # <-- FIX: cast numpy.bool_ → bool
 
 
 # ------------------------------------------------------------------------------
 # Normalization
 # ------------------------------------------------------------------------------
+
 
 def normalize_lat_lon(ds: xr.Dataset) -> xr.Dataset:
     ds_norm = ds.copy()
@@ -96,11 +98,14 @@ def normalize_lat_lon(ds: xr.Dataset) -> xr.Dataset:
 # Contract builder
 # ------------------------------------------------------------------------------
 
-def build_spatial_contract(ds: xr.Dataset) -> Mapping[str, Union[np.ndarray, str, float, List[str]]]:
+
+def build_spatial_contract(
+    ds: xr.Dataset,
+) -> Mapping[str, np.ndarray | str | float | list[str]]:
     lat = ds["lat"].values
     lon = ds["lon"].values
 
-    warnings: List[str] = []
+    warnings: list[str] = []
 
     lat_spacing = _compute_spacing(lat)
     lon_spacing = _compute_spacing(lon)
@@ -127,7 +132,10 @@ def build_spatial_contract(ds: xr.Dataset) -> Mapping[str, Union[np.ndarray, str
 # Entry point
 # ------------------------------------------------------------------------------
 
-def process_grid(ds: xr.Dataset) -> Tuple[xr.Dataset, Mapping[str, Union[np.ndarray, str, float, List[str]]]]:
+
+def process_grid(
+    ds: xr.Dataset,
+) -> tuple[xr.Dataset, Mapping[str, np.ndarray | str | float | list[str]]]:
     _assert_coordinate_exists(ds, "lat")
     _assert_coordinate_exists(ds, "lon")
 

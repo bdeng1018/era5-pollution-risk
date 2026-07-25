@@ -20,7 +20,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.core_03.chunk_schema import ChunkSchema
 from src.core_03.chunk_spec import ChunkSpec
 
 DTYPE_MAP = {

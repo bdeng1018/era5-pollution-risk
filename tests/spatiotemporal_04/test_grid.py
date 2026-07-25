@@ -14,7 +14,7 @@ or tensor construction. It isolates the grid invariant only.
 import numpy as np
 import xarray as xr
 
-import src.spatiotemporal_04.grid as grid
+from src.spatiotemporal_04 import grid
 
 
 def test_grid_process_grid_basic():
@@ -32,9 +32,7 @@ def test_grid_process_grid_basic():
     time = np.array(["2020-01-01"], dtype="datetime64[ns]")
 
     ds = xr.Dataset(
-        {
-            "temp": (("time", "lat", "lon"), np.random.rand(1, 5, 4))
-        },
+        {"temp": (("time", "lat", "lon"), np.random.rand(1, 5, 4))},
         coords={"time": time, "lat": lat, "lon": lon},
     )
 

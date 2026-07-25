@@ -26,6 +26,7 @@ from pathlib import Path
 # Helper: load JSON diagnostic report
 # ------------------------------------------------------------------------------
 
+
 def _load_report(path: Path) -> dict:
     if not path.exists():
         return {"error": f"Missing diagnostic report: {path}"}
@@ -39,6 +40,7 @@ def _load_report(path: Path) -> dict:
 # ------------------------------------------------------------------------------
 # Integration diagnostic entry point
 # ------------------------------------------------------------------------------
+
 
 def run_stage4_integration_diagnostic(base_dir: str, output_path: str) -> None:
     """
@@ -61,7 +63,8 @@ def run_stage4_integration_diagnostic(base_dir: str, output_path: str) -> None:
         "grid": report_dir / "stage4_grid_report.json",
         "mask": report_dir / "stage4_mask_report.json",
         "temporal_alignment": report_dir / "stage4_temporal_alignment_report.json",
-        "temporal_interpolation": report_dir / "stage4_temporal_interpolation_report.json",
+        "temporal_interpolation": report_dir
+        / "stage4_temporal_interpolation_report.json",
         "tensor_builder": report_dir / "stage4_tensor_builder_report.json",
         "qc": report_dir / "stage4_qc_report.json",
     }
@@ -74,7 +77,9 @@ def run_stage4_integration_diagnostic(base_dir: str, output_path: str) -> None:
         "grid": reports["grid"].get("grid_pass", False),
         "mask": reports["mask"].get("mask_pass", False),
         "temporal_alignment": reports["temporal_alignment"].get("temporal_pass", False),
-        "temporal_interpolation": reports["temporal_interpolation"].get("interp_pass", False),
+        "temporal_interpolation": reports["temporal_interpolation"].get(
+            "interp_pass", False
+        ),
         "tensor_builder": reports["tensor_builder"].get("tensor_pass", False),
         "qc": reports["qc"].get("qc_pass", False),
     }

@@ -2,15 +2,40 @@
 Branch 2 Configuration Loader
 -----------------------------
 
+Provides deterministic, side‑effect‑free YAML loading for the ERA5
+pipeline. All configuration files (paths, variables, years, months,
+region, master config) are resolved relative to the project root and
+validated explicitly.
+
+Branch 2 Notes
+--------------
 Branch 2 requires:
-- clean YAML loading
-- explicit validation of required keys
+- clean YAML loading with explicit type validation
+- deterministic project_root resolution
 - correct loading of paths.yml (including config_dir)
 - correct loading of variables, years, months, region
-- non-fatal config validation for ingestion
-- deterministic project_root resolution
+- non‑fatal config validation for ingestion (multi‑variable safe)
+- no implicit defaults or legacy JSON fallbacks
 
-This module replaces the Branch 1 loader.
+This module replaces the Branch 1 loader and is used across ingestion,
+preprocessing, chunking, and IR₄ compilation.
+
+Branch 3 Notes
+--------------
+Future AI/LLM/RAG tooling may read configuration values for metadata
+search, lineage exploration, or natural‑language diagnostics. These
+components will not modify deterministic config behavior. Any AI‑specific
+configuration will live in separate modules to preserve Branch 2
+invariants.
+
+Invariant
+---------
+This module must remain:
+- deterministic
+- side‑effect‑free
+- safe to import during pytest collection
+- free of heavy dependencies
+- YAML‑only (no JSON fallbacks)
 """
 
 from pathlib import Path
@@ -18,9 +43,9 @@ from pathlib import Path
 import yaml
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Generic YAML loader
-# ------------------------------------------------------------------------------
+# ==============================================================================
 def load_yaml(path: str | Path) -> dict:
     """Load a YAML file and return its contents as a dictionary."""
     path = Path(path).resolve()
@@ -30,9 +55,9 @@ def load_yaml(path: str | Path) -> dict:
         return yaml.safe_load(f)
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Branch 2: Unified YAML loader (needed by Stage 1)
-# ------------------------------------------------------------------------------
+# ==============================================================================
 def load_config_yaml(path: str | Path) -> dict:
     """
     Load config.yml and validate that the result is a dictionary.
@@ -44,9 +69,9 @@ def load_config_yaml(path: str | Path) -> dict:
     return data
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Branch 2: Load paths.yml
-# ------------------------------------------------------------------------------
+# ==============================================================================
 def load_paths() -> dict:
     project_root = Path(__file__).resolve().parents[2]
     path = project_root / "configs" / "paths.yml"
@@ -61,8 +86,8 @@ def load_paths() -> dict:
         "model_artifact_dir",
         "predictions_dir",
         "config_dir",
-        "chunk_output_dir",      # REQUIRED for Stage 3
-        "chunk_metadata_dir",    # REQUIRED for Stage 3
+        "chunk_output_dir",  # REQUIRED for Stage 3
+        "chunk_metadata_dir",  # REQUIRED for Stage 3
     ]
 
     missing = [k for k in required if k not in cfg]
@@ -72,9 +97,9 @@ def load_paths() -> dict:
     return cfg
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Branch 2: Load ingestion configs
-# ------------------------------------------------------------------------------
+# ==============================================================================
 def load_years() -> list[str]:
     project_root = Path(__file__).resolve().parents[2]
     path = project_root / "configs" / "years.yml"
@@ -111,18 +136,18 @@ def load_region() -> dict:
     return data
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Branch 2: Load master config (optional)
-# ------------------------------------------------------------------------------
+# ==============================================================================
 def load_master_config() -> dict:
     project_root = Path(__file__).resolve().parents[2]
     path = project_root / "configs" / "config.yml"
     return load_config_yaml(path)
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Branch 2 unified loader (used by notebooks)
-# ------------------------------------------------------------------------------
+# ==============================================================================
 def load_config() -> dict:
     master = load_master_config()
     return {

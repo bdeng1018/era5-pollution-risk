@@ -42,6 +42,7 @@ from src.core_03.chunk_spec import ChunkSpec
 # Synthetic Stage‑2 metadata generator (matches your real metadata.json)
 # ----------------------------------------------------------------------
 
+
 def build_stage2_metadata(tmp_path):
     """
     Build synthetic Stage‑2 metadata in the EXACT shape required by Stage‑3:
@@ -58,22 +59,21 @@ def build_stage2_metadata(tmp_path):
         }
     """
 
-    timestamps = [
-        f"2023-09-01T{str(h).zfill(2)}:00"
-        for h in range(24)
-    ]
+    timestamps = [f"2023-09-01T{str(h).zfill(2)}:00" for h in range(24)]
 
     metadata = {}
 
     for ts in timestamps:
-        fname = f"in_{ts.replace(':','').replace('-','')}.parquet"
+        fname = f"in_{ts.replace(':', '').replace('-', '')}.parquet"
         fpath = tmp_path / fname
 
-        df = pd.DataFrame({
-            "time": [ts],
-            "t2m": [280.0],
-            "wind_speed": [5.0],
-        })
+        df = pd.DataFrame(
+            {
+                "time": [ts],
+                "t2m": [280.0],
+                "wind_speed": [5.0],
+            }
+        )
         df.to_parquet(fpath)
 
         metadata[f"{ts}::t2m"] = {
@@ -98,6 +98,7 @@ def build_stage2_metadata(tmp_path):
 # ----------------------------------------------------------------------
 # Test 1 — Daily planner, no tiles
 # ----------------------------------------------------------------------
+
 
 def test_chunk_planner_daily_no_tiles(tmp_path):
     metadata = build_stage2_metadata(tmp_path)
@@ -141,6 +142,7 @@ def test_chunk_planner_daily_no_tiles(tmp_path):
 # ----------------------------------------------------------------------
 # Test 2 — Daily planner, with tiles
 # ----------------------------------------------------------------------
+
 
 def test_chunk_planner_with_tiles(tmp_path):
     metadata = build_stage2_metadata(tmp_path)

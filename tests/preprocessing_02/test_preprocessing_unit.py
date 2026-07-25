@@ -29,6 +29,7 @@ from pathlib import Path
 # Unit Test — unzip_grib
 # ==============================================================================
 
+
 def test_unzip_module_has_main():
     unzip = importlib.import_module("src.preprocessing_02.unzip_grib")
     assert hasattr(unzip, "main")
@@ -38,6 +39,7 @@ def test_unzip_module_has_main():
 # ==============================================================================
 # Unit Test — inspect_grib
 # ==============================================================================
+
 
 def test_inspect_module_has_main():
     inspect = importlib.import_module("src.preprocessing_02.inspect_grib")
@@ -49,6 +51,7 @@ def test_inspect_module_has_main():
 # Unit Test — convert_grib_to_parquet
 # ==============================================================================
 
+
 def test_convert_module_has_main():
     convert = importlib.import_module("src.preprocessing_02.convert_grib_to_parquet")
     assert hasattr(convert, "main")
@@ -58,6 +61,7 @@ def test_convert_module_has_main():
 # ==============================================================================
 # Unit Test — run_preprocessing
 # ==============================================================================
+
 
 def test_run_preprocessing_has_main():
     rp = importlib.import_module("src.preprocessing_02.run_preprocessing")
@@ -69,8 +73,10 @@ def test_run_preprocessing_has_main():
 # Unit Test — Paths() Utility
 # ==============================================================================
 
+
 def test_paths_resolve_directories():
     from src.utils.paths import Paths
+
     p = Paths()
 
     required_attrs = ["raw_dir", "intermediate_dir", "logs_dir"]
@@ -84,8 +90,10 @@ def test_paths_resolve_directories():
 # Unit Test — Ensure no heavy imports occur
 # ==============================================================================
 
+
 def test_no_heavy_imports():
     import sys
+
     banned = ["cfgrib", "eccodes"]
     for name in banned:
         assert name not in sys.modules

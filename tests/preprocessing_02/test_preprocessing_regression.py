@@ -29,6 +29,7 @@ from pathlib import Path
 # Regression Test — Public API Stability
 # ==============================================================================
 
+
 def test_regression_public_api_stability():
     """
     Regression test: ensure all Stage 2 preprocessing modules still expose
@@ -42,18 +43,23 @@ def test_regression_public_api_stability():
 
     assert hasattr(unzip, "main"), "Regression: unzip_grib.main() missing"
     assert hasattr(inspect, "main"), "Regression: inspect_grib.main() missing"
-    assert hasattr(convert, "main"), "Regression: convert_grib_to_parquet.main() missing"
+    assert hasattr(convert, "main"), (
+        "Regression: convert_grib_to_parquet.main() missing"
+    )
     assert hasattr(rp, "main"), "Regression: run_preprocessing.main() missing"
 
     assert callable(unzip.main), "Regression: unzip_grib.main() not callable"
     assert callable(inspect.main), "Regression: inspect_grib.main() not callable"
-    assert callable(convert.main), "Regression: convert_grib_to_parquet.main() not callable"
+    assert callable(convert.main), (
+        "Regression: convert_grib_to_parquet.main() not callable"
+    )
     assert callable(rp.main), "Regression: run_preprocessing.main() not callable"
 
 
 # ==============================================================================
 # Regression Test — Paths Structure Stability
 # ==============================================================================
+
 
 def test_regression_paths_structure_stability():
     """
@@ -73,12 +79,15 @@ def test_regression_paths_structure_stability():
     for attr in expected_attrs:
         assert hasattr(p, attr), f"Regression: Paths.{attr} missing"
         value = getattr(p, attr)
-        assert isinstance(value, Path), f"Regression: Paths.{attr} must be a pathlib.Path"
+        assert isinstance(value, Path), (
+            f"Regression: Paths.{attr} must be a pathlib.Path"
+        )
 
 
 # ==============================================================================
 # Regression Test — Orchestrator Stability
 # ==============================================================================
+
 
 def test_regression_orchestrator_stability():
     """
@@ -87,12 +96,15 @@ def test_regression_orchestrator_stability():
     break the pipeline entry point.
     """
     rp = importlib.import_module("src.preprocessing_02.run_preprocessing")
-    assert callable(rp.main), "Regression: run_preprocessing.main() is no longer callable"
+    assert callable(rp.main), (
+        "Regression: run_preprocessing.main() is no longer callable"
+    )
 
 
 # ==============================================================================
 # Regression Test — No Heavy Imports at Module Load
 # ==============================================================================
+
 
 def test_regression_no_heavy_imports():
     """
@@ -101,6 +113,7 @@ def test_regression_no_heavy_imports():
     and prevents accidental top-level GRIB parsing.
     """
     import sys
+
     banned = ["cfgrib", "eccodes"]
 
     for name in banned:

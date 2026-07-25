@@ -1,16 +1,37 @@
 """
-Lightweight data validation utilities for the ERA5 Branch 1 pipeline.
+Lightweight data validation utilities for the ERA5 pipeline (Branch 2)
 
-Branch 1 keeps validation intentionally minimal:
-- file exists
-- file is non‑empty
-- basic GRIB and Parquet checks (no schema validation)
+This module provides minimal, fail‑fast validation used during ingestion
+and preprocessing. It performs only basic checks such as:
+- file existence
+- non‑empty file detection
+- simple GRIB/Parquet sanity checks
 
-This module is designed for quick, fail‑fast checks during ingestion and
-conversion steps. Branch 2 will introduce richer validation such as:
-- GRIB variable/schema checks
-- Parquet column/type validation
-- batch validation for multi‑variable ingestion
+Branch 2 Note
+-------------
+Branch 2 expands validation inside stage‑specific modules (e.g., GRIB
+metadata extraction, chunk metadata, IR₄ compiler checks). This module
+remains intentionally lightweight and side‑effect‑free to keep early
+pipeline stages fast and deterministic.
+
+Branch 3 Note
+-------------
+Future AI/LLM/RAG tooling may introduce intelligent diagnostics such as:
+- schema‑aware GRIB validation
+- Parquet column/type inspection
+- anomaly detection in ingestion outputs
+- natural‑language explanations of validation failures
+
+These advanced validators will live in separate modules and will not
+change the deterministic behavior of this lightweight validator.
+
+Invariant
+---------
+This module must remain:
+- minimal
+- deterministic
+- safe to import during pytest collection
+- free of heavy dependencies
 """
 
 import argparse

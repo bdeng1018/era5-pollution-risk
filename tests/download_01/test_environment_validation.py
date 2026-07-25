@@ -9,9 +9,6 @@ Matches actual Branch 2 signatures:
 Uses YAML config.yml and correct Paths class.
 """
 
-import os
-from pathlib import Path
-
 import pytest
 
 import src.download_01.download_era5_single as single_mod
@@ -96,9 +93,7 @@ def test_config_valid(tmp_path):
 
     paths.config_dir.mkdir(parents=True, exist_ok=True)
     good_cfg = paths.config_dir / "config.yml"
-    good_cfg.write_text(
-        "years: [2023]\nmonths: [1]\nvariables: ['2m_temperature']"
-    )
+    good_cfg.write_text("years: [2023]\nmonths: [1]\nvariables: ['2m_temperature']")
 
     result = single_mod.validate_config(paths)
     assert result is True

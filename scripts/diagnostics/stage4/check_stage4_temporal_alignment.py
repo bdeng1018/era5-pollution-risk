@@ -35,6 +35,7 @@ import xarray as xr
 # Utility functions
 # ------------------------------------------------------------------------------
 
+
 def _is_monotonic(arr: np.ndarray) -> bool:
     """Check if array is strictly monotonic increasing."""
     return bool(np.all(np.diff(arr) > np.timedelta64(0, "h")))
@@ -85,6 +86,7 @@ def _build_aligned_time(time: np.ndarray, freq_hours: int) -> np.ndarray:
 # Diagnostic entry point
 # ------------------------------------------------------------------------------
 
+
 def run_temporal_alignment_diagnostic(dataset_path: str, output_path: str) -> None:
     """
     Run Stage 4 temporal alignment diagnostic.
@@ -128,11 +130,7 @@ def run_temporal_alignment_diagnostic(dataset_path: str, output_path: str) -> No
     coverage_ratio = float(time.size) / float(aligned_length)
 
     # Pass criteria
-    temporal_pass = (
-        monotonic
-        and duplicate_count == 0
-        and stray_intervals == 0
-    )
+    temporal_pass = monotonic and duplicate_count == 0 and stray_intervals == 0
 
     # ----------------------------------------------------------------------
     # Build report
@@ -167,7 +165,9 @@ def run_temporal_alignment_diagnostic(dataset_path: str, output_path: str) -> No
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Stage 4 Temporal Alignment Diagnostic")
+    parser = argparse.ArgumentParser(
+        description="Stage 4 Temporal Alignment Diagnostic"
+    )
     parser.add_argument(
         "--dataset",
         type=str,

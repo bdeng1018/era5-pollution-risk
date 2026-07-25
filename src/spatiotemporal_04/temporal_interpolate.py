@@ -10,9 +10,8 @@ Responsibilities:
 - Do NOT modify lat/lon resolution
 """
 
-import inspect
-import os
-from typing import Any, Dict, List, Mapping, Tuple
+from collections.abc import Mapping
+from typing import Any
 
 import numpy as np
 import xarray as xr
@@ -21,7 +20,8 @@ import xarray as xr
 # Core interpolation
 # ------------------------------------------------------------------------------
 
-def interpolate_time(ds: xr.Dataset, fields: List[str]) -> xr.Dataset:
+
+def interpolate_time(ds: xr.Dataset, fields: list[str]) -> xr.Dataset:
     """
     Interpolate values along the time dimension only.
     Assumes time is evenly spaced (from temporal_align).
@@ -46,20 +46,25 @@ def interpolate_time(ds: xr.Dataset, fields: List[str]) -> xr.Dataset:
 # Diagnostics
 # ------------------------------------------------------------------------------
 
-def detect_added_timestamps(original_time: np.ndarray, aligned_time: np.ndarray) -> List[str]:
+
+def detect_added_timestamps(
+    original_time: np.ndarray, aligned_time: np.ndarray
+) -> list[str]:
     """
     Identify timestamps that were added during temporal alignment.
     """
 
     original_set = set(original_time.astype("datetime64[ns]"))
-    added = [str(t) for t in aligned_time.astype("datetime64[ns]") if t not in original_set]
+    added = [
+        str(t) for t in aligned_time.astype("datetime64[ns]") if t not in original_set
+    ]
     return added
 
 
 def compute_interpolated_fraction(
     ds_before: xr.Dataset,
     ds_after: xr.Dataset,
-    fields: List[str],
+    fields: list[str],
 ) -> float:
     """
     Fraction of values that were interpolated (i.e., changed from NaN to non-NaN).
@@ -85,13 +90,14 @@ def compute_interpolated_fraction(
 # Contract builder
 # ------------------------------------------------------------------------------
 
+
 def build_interpolation_contract(
     method: str,
-    added_timestamps: List[str],
+    added_timestamps: list[str],
     interpolated_fraction: float,
     original_time: np.ndarray,
     aligned_time: np.ndarray,
-    filled_indices: List[int],
+    filled_indices: list[int],
 ) -> Mapping[str, Any]:
     """
     Construct Stage 4 temporal interpolation metadata contract.
@@ -114,10 +120,11 @@ def build_interpolation_contract(
 # Entry point
 # ------------------------------------------------------------------------------
 
+
 def process_interpolation(
     ds: xr.Dataset,
-    fields: List[str],
-) -> Tuple[xr.Dataset, Mapping[str, Any]]:
+    fields: list[str],
+) -> tuple[xr.Dataset, Mapping[str, Any]]:
 
     original_time = ds["time"].values
 

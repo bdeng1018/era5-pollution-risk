@@ -13,7 +13,7 @@ This test isolates the mask invariant only.
 import numpy as np
 import xarray as xr
 
-import src.spatiotemporal_04.mask as mask
+from src.spatiotemporal_04 import mask
 
 
 def test_mask_process_spatial_consistency_basic():
@@ -35,9 +35,7 @@ def test_mask_process_spatial_consistency_basic():
     temp_data[0, 2, 1] = np.nan  # introduce missingness
 
     ds = xr.Dataset(
-        {
-            "temp": (("time", "lat", "lon"), temp_data)
-        },
+        {"temp": (("time", "lat", "lon"), temp_data)},
         coords={"time": time, "lat": lat, "lon": lon},
     )
 
@@ -82,4 +80,3 @@ def test_mask_process_spatial_consistency_basic():
 
     # 8. Masked dataset must not introduce shape drift
     assert ds_masked.temp.shape == ds.temp.shape
-

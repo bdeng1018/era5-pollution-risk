@@ -44,6 +44,7 @@ REQUIRED_COORDS = {"time", "lat", "lon"}
 # Loaders
 # ------------------------------------------------------------------------------
 
+
 def load_config():
     PROJECT_ROOT = Path(__file__).resolve().parents[3]
     cfg_path = PROJECT_ROOT / "configs/config.yml"
@@ -65,6 +66,7 @@ def load_metadata():
 # ------------------------------------------------------------------------------
 # Chunk Validation
 # ------------------------------------------------------------------------------
+
 
 def validate_chunk_file(chunk_path: Path):
     """Validate a single Stage 3 chunk parquet file."""
@@ -106,6 +108,7 @@ def validate_chunk_file(chunk_path: Path):
 # ------------------------------------------------------------------------------
 # Stage 2 Cross‑Check (Key‑Indexed Schema)
 # ------------------------------------------------------------------------------
+
 
 def parse_chunk_name(chunk_name: str):
     """
@@ -186,8 +189,11 @@ def crosscheck_stage2(chunk_name: str, metadata: dict):
 # Main
 # ------------------------------------------------------------------------------
 
+
 def main():
-    print("\n=== Stage 3 Chunk Integrity Diagnostic (Key‑Indexed Metadata Schema) ===\n")
+    print(
+        "\n=== Stage 3 Chunk Integrity Diagnostic (Key‑Indexed Metadata Schema) ===\n"
+    )
 
     cfg = load_config()
     metadata = load_metadata()

@@ -30,19 +30,21 @@ def test_schema_basic_validation():
     - dtype mapping must match exactly
     """
 
-    schema = ChunkSchema({
-        "schema": {
-            # Your real Stage 3 schema ALWAYS includes lat/lon
-            "columns": ["time", "lat", "lon", "t2m"],
-            "dtypes": {
-                "time": "string",
-                "lat": "float64",
-                "lon": "float64",
-                "t2m": "float64",
-            },
-            "version": "1.0",
+    schema = ChunkSchema(
+        {
+            "schema": {
+                # Your real Stage 3 schema ALWAYS includes lat/lon
+                "columns": ["time", "lat", "lon", "t2m"],
+                "dtypes": {
+                    "time": "string",
+                    "lat": "float64",
+                    "lon": "float64",
+                    "t2m": "float64",
+                },
+                "version": "1.0",
+            }
         }
-    })
+    )
 
     # Column validation — correct order
     assert schema.validate_columns(["time", "lat", "lon", "t2m"])
@@ -75,14 +77,16 @@ def test_schema_description():
     containing the schema version and column names.
     """
 
-    schema = ChunkSchema({
-        "schema": {
-            # Description test can use a minimal schema
-            "columns": ["time", "t2m"],
-            "dtypes": {"time": "string", "t2m": "float64"},
-            "version": "1.0",
+    schema = ChunkSchema(
+        {
+            "schema": {
+                # Description test can use a minimal schema
+                "columns": ["time", "t2m"],
+                "dtypes": {"time": "string", "t2m": "float64"},
+                "version": "1.0",
+            }
         }
-    })
+    )
 
     desc = schema.describe()
 

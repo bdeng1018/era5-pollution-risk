@@ -101,7 +101,11 @@ def build_parquet_metadata() -> dict:
                         ts_str = str(ts)
 
                         # Identify the actual data column (exclude coords)
-                        data_cols = [c for c in df.columns if c not in ("time", "latitude", "longitude")]
+                        data_cols = [
+                            c
+                            for c in df.columns
+                            if c not in ("time", "latitude", "longitude")
+                        ]
                         if not data_cols:
                             raise ValueError(f"No data column found in {parquet_file}")
 

@@ -1,16 +1,30 @@
 """
-Environment validation utilities for the ERA5 pipeline (Branch 2).
+Environment validation utilities for the ERA5 pipeline (Branch 2)
 
 This module performs lightweight, fail‑fast checks to ensure the runtime
-environment is correctly configured for ingestion and preprocessing:
+environment is correctly configured for deterministic ingestion and
+preprocessing in Branch 2:
 
 - Python version (3.10+ required for cfgrib/eccodes compatibility)
 - Required packages (xarray, cfgrib, pyarrow, pandas, numpy)
-- Minimal directory checks (configs/, raw/)
+- Minimal directory checks (configs/, data/raw/era5)
 
-Branch 2 intentionally keeps environment validation minimal. Heavy validation
+Branch 2 Note
+-------------
+Environment validation is intentionally minimal. Heavy validation
 (e.g., GRIB schema checks, parquet integrity checks, extended directory
 structure) is handled inside Stage 2 modules, not here.
+
+Branch 3 Note
+-------------
+Future AI/LLM/RAG tooling will not modify deterministic environment
+requirements. Any AI‑specific validation will live in separate modules
+to preserve clean import behavior for Branch 2.
+
+Invariant
+---------
+This module must remain side‑effect‑free and safe to import during
+pytest collection and `python -m` execution.
 """
 
 import logging
@@ -80,7 +94,7 @@ def check_directory(path: str | Path):
 
 def validate_environment():
     """
-    Run all environment checks required for Branch 1.
+    Run all environment checks required for Branch 2.
 
     Checks:
     - Python version

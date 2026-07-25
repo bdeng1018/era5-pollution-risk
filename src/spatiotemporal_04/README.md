@@ -1,27 +1,26 @@
-# spatiotemporal_04 — Stage 4 Spatiotemporal Modeling & Risk Analysis (Branch 2)
+# spatiotemporal_04 — Stage 4 Spatiotemporal Compiler (Branch 2)
 
 Stage 4 consumes the fully merged ERA5 dataset produced in Stage 3 and transforms it into **analysis‑ready spatiotemporal tensors**, **compiler‑validated invariants**, and **domain‑agnostic meteorological composites**.
-This stage is intentionally designed as a **pure library layer**: deterministic, import‑safe, and free of side effects.
 
-Stage 4 is the **compiler** of the pipeline. It converts raw geophysical fields into structured, validated, reproducible tensors suitable for downstream modeling, risk scoring, and visualization.
+Stage 4 is intentionally designed as a **pure library layer**: deterministic, import‑safe, and free of side effects. It is the **compiler** of the pipeline — converting raw geophysical fields into structured, validated, reproducible tensors suitable for downstream modeling, risk scoring, and visualization.
 
 ---
 
-## Objectives
+## 🎯 Objectives
 
 Stage 4 provides a stable interface for:
 
 - **Loading Stage 3 outputs** (`merged.nc`, metadata, QC)
 - **Constructing spatiotemporal tensors** (`time × lat × lon × variables`)
 - **Applying domain‑agnostic transforms** (grid normalization, alignment, interpolation)
-- **Propagating QC and metadata contracts**
-- **Producing analysis‑ready artifacts** for Stage 5 or external tools
+- **Propagating QC + metadata contracts**
+- **Producing analysis‑ready artifacts** for Stage 5 modeling or external tools
 
 All transformations are **pure**, **deterministic**, and **reproducible**.
 
 ---
 
-## Inputs
+## 📥 Inputs
 
 Stage 4 expects the following Stage 3 outputs:
 
@@ -42,7 +41,7 @@ Paths are defined in:
 
 ---
 
-## Outputs
+## 📤 Outputs
 
 Stage 4 produces:
 
@@ -50,7 +49,7 @@ Stage 4 produces:
 Structured arrays with shape:
 `time × lat × lon × variables`
 
-- **Aligned and interpolated temporal sequences**
+- **Aligned + interpolated temporal sequences**
 
 - **Grid‑normalized datasets**
 (consistent lat/lon ordering, masks, metadata)
@@ -64,9 +63,9 @@ Those belong in **Stage 5+**, where modeling logic and domain semantics live.
 
 ---
 
-## Directory Structure
+## 📁 Directory Structure
 
-```code
+```text
 src/
 └── spatiotemporal_04/
     ├── __init__.py
@@ -84,18 +83,18 @@ Each module is **pure**, **import‑safe**, and **side‑effect‑free**.
 
 ---
 
-## Core Concepts
+## 🧩 Core Concepts
 
 ### Spatiotemporal Tensor
 
-Stage 4 constructs tensors with strict invariants:
+Stage 4 constructs tensors with strict IR₄ invariants:
 
-- Sorted time dimension
-- Normalized lat/lon coordinates
-- Consistent variable ordering
-- Stable dtypes
-- No missing coordinates
-- No duplicate indices
+- sorted time dimension
+- normalized lat/lon coordinates
+- consistent variable ordering
+- stable dtypes
+- no missing coordinates
+- no duplicate indices
 
 These invariants ensure Stage 5 modeling can rely on a stable, predictable API.
 
@@ -103,10 +102,10 @@ These invariants ensure Stage 5 modeling can rely on a stable, predictable API.
 
 Stage 4 provides utilities for:
 
-- Aligning timestamps across variables
-- Filling missing hours
-- Interpolating short gaps
-- Ensuring monotonic time sequences
+- aligning timestamps across variables
+- filling missing hours
+- interpolating short gaps
+- ensuring monotonic time sequences
 
 These operations live in:
 
@@ -142,9 +141,9 @@ These operations live in:
 
 ---
 
-## Usage Example
+## ▶️ Usage Example
 
-```code
+```python
 from src.spatiotemporal_04 import load_stage3_outputs
 from src.spatiotemporal_04.grid import process_grid
 from src.spatiotemporal_04.mask import process_spatial_consistency
@@ -178,7 +177,7 @@ This is the canonical Stage 4 workflow.
 
 ---
 
-## Design Principles
+## 🧭 Design Principles
 
 - **Pure library modules**
 No `main()`, no CLI, no side effects.
@@ -197,7 +196,7 @@ No mutation of global state; no implicit I/O.
 
 ---
 
-## Dependencies
+## 📦 Dependencies
 
 Stage 4 relies on:
 
@@ -211,12 +210,12 @@ No external services are required.
 
 ---
 
-## Extensibility
+## 🔮 Extensibility
 
 Stage 4 can be extended with:
 
-- Additional risk indices
-- Custom tensor formats
-- More aggregation pipelines
-- Domain‑specific modeling features
-- Integration with Stage 5 ML pipelines
+- additional risk indices
+- custom tensor formats
+- more aggregation pipelines
+- domain‑specific modeling features
+- integration with Stage 5 ML pipelines

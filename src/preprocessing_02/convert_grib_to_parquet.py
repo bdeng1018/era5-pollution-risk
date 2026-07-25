@@ -76,14 +76,12 @@ KNOWN_ERA5_VARS = list(FILENAME_TO_SHORTNAME.values())
 # Flux variables (accumulated, different grid, NOT safe for Stage 3 merge)
 # ------------------------------------------------------------------------------
 
-FLUX_VARS = {
-    "slhf", "sshf", "ssr", "ssrc", "ssrd", "str",
-    "tp", "e"
-}
+FLUX_VARS = {"slhf", "sshf", "ssr", "ssrc", "ssrd", "str", "tp", "e"}
 
 # ------------------------------------------------------------------------------
 # Multi-variable probing (lazy heavy imports)
 # ------------------------------------------------------------------------------
+
 
 def list_grib_variables(grib_path: Path) -> list[str]:
     import xarray as xr
@@ -103,9 +101,11 @@ def list_grib_variables(grib_path: Path) -> list[str]:
             continue
     return vars
 
+
 # ------------------------------------------------------------------------------
 # Single-variable GRIB detection
 # ------------------------------------------------------------------------------
+
 
 def is_single_variable_grib(path: Path) -> bool:
     parts = path.stem.split("_")
@@ -120,12 +120,15 @@ def is_single_variable_grib(path: Path) -> bool:
     month = parts[-1]
     return year.isdigit() and month.isdigit()
 
+
 # ------------------------------------------------------------------------------
 # Dataset → Parquet conversion
 # ------------------------------------------------------------------------------
 
-def _convert_dataset_to_parquet(ds, grib_path: Path, intermediate_dir: Path, var: str) -> dict:
-    import pandas as pd
+
+def _convert_dataset_to_parquet(
+    ds, grib_path: Path, intermediate_dir: Path, var: str
+) -> dict:
 
     parts = grib_path.stem.split("_")
     year = int(parts[-2])
@@ -165,7 +168,9 @@ def _convert_dataset_to_parquet(ds, grib_path: Path, intermediate_dir: Path, var
     # STATIC / MONTHLY FIELDS (rare)
     # --------------------------------------------------------------------------
     if "time" not in ds.coords and "valid_time" not in ds:
-        logger.warning(f"[convert] {var} in {grib_path.name} has no time/valid_time → static/monthly.")
+        logger.warning(
+            f"[convert] {var} in {grib_path.name} has no time/valid_time → static/monthly."
+        )
 
         df = ds.to_dataframe().reset_index()
 
@@ -233,12 +238,18 @@ def _convert_dataset_to_parquet(ds, grib_path: Path, intermediate_dir: Path, var
         if raw_times is not None:
             times = pd.to_datetime(raw_times)
         else:
-            times = pd.to_datetime([
-                ds.time.values[i] if "time" in ds.coords else
-                ds.step.values[i] if "step" in ds.coords else
-                i
-                for i in range(ds.dims.get("time", ds.dims.get("step", 0)))
-            ])
+            times = pd.to_datetime(
+                [
+                    (
+                        ds.time.values[i]
+                        if "time" in ds.coords
+                        else ds.step.values[i]
+                        if "step" in ds.coords
+                        else i
+                    )
+                    for i in range(ds.dims.get("time", ds.dims.get("step", 0)))
+                ]
+            )
 
     # Deduplicate + sort
     times = pd.to_datetime(sorted(set(times)))
@@ -264,14 +275,15 @@ def _convert_dataset_to_parquet(ds, grib_path: Path, intermediate_dir: Path, var
 
         df = df.rename(columns={"latitude": "lat", "longitude": "lon"})
 
-		# --- FILTER OUT TAIL HOURS (e.g., CIN/CAPE 2018-12-31) ---
+        # --- FILTER OUT TAIL HOURS (e.g., CIN/CAPE 2018-12-31) ---
         month_start = pd.Timestamp(f"{year}-{month:02d}-01T00:00:00")
         df = df[df["time"] >= month_start]
 
         if (df["time"] < month_start).any():
-            logger.warning(f"[convert] Tail-hour timestamps detected for {var}. "
-                           "Ensure old Parquets are deleted.")
-
+            logger.warning(
+                f"[convert] Tail-hour timestamps detected for {var}. "
+                "Ensure old Parquets are deleted."
+            )
 
         # If the slice is outside the month, skip writing Parquet
         if df.empty:
@@ -291,6 +303,7 @@ def _convert_dataset_to_parquet(ds, grib_path: Path, intermediate_dir: Path, var
 # Branch 1: Single-variable conversion
 # ------------------------------------------------------------------------------
 
+
 def convert_single_variable(grib_path: Path, intermediate_dir: Path) -> dict:
     import xarray as xr
 
@@ -306,14 +319,16 @@ def convert_single_variable(grib_path: Path, intermediate_dir: Path) -> dict:
             engine="cfgrib",
             filter_by_keys={"shortName": var},
             backend_kwargs={"indexpath": "", "read_keys": ["time", "step"]},
-            )
+        )
         if not ds.data_vars:
-            logger.warning(f"[convert] filter_by_keys({var}) empty → full open fallback.")
+            logger.warning(
+                f"[convert] filter_by_keys({var}) empty → full open fallback."
+            )
             ds = xr.open_dataset(
                 grib_path,
                 engine="cfgrib",
                 backend_kwargs={"indexpath": "", "read_keys": ["time", "step"]},
-                )
+            )
     except Exception as e:
         logger.error(f"[convert] Failed to open {grib_path.name}: {e}")
         raise
@@ -328,9 +343,11 @@ def convert_single_variable(grib_path: Path, intermediate_dir: Path) -> dict:
         "is_static": meta.get("is_static", False),
     }
 
+
 # ------------------------------------------------------------------------------
 # Branch 2: Multi-variable conversion
 # ------------------------------------------------------------------------------
+
 
 def convert_multi_variable(grib_path: Path, intermediate_dir: Path) -> dict:
     import xarray as xr
@@ -349,7 +366,7 @@ def convert_multi_variable(grib_path: Path, intermediate_dir: Path) -> dict:
                 engine="cfgrib",
                 filter_by_keys={"shortName": var},
                 backend_kwargs={"indexpath": "", "read_keys": ["time", "step"]},
-                )
+            )
 
             if not ds.data_vars:
                 logger.warning(f"[convert] Empty dataset for {var} → skip.")
@@ -365,9 +382,11 @@ def convert_multi_variable(grib_path: Path, intermediate_dir: Path) -> dict:
     meta["timestamps"] = sorted(meta["timestamps"])
     return meta
 
+
 # ------------------------------------------------------------------------------
 # Unified entrypoint
 # ------------------------------------------------------------------------------
+
 
 def convert_grib_to_parquet(grib_path: Path) -> dict:
     paths = Paths()
@@ -378,9 +397,11 @@ def convert_grib_to_parquet(grib_path: Path) -> dict:
         return convert_single_variable(grib_path, intermediate_dir)
     return convert_multi_variable(grib_path, intermediate_dir)
 
+
 # ------------------------------------------------------------------------------
 # Stage 2 public API entrypoint
 # ------------------------------------------------------------------------------
+
 
 def main():
     try:
@@ -394,6 +415,7 @@ def main():
     except Exception as e:
         logger.error(f"[convert] main() failed: {e}")
         raise
+
 
 if __name__ == "__main__":
     main()

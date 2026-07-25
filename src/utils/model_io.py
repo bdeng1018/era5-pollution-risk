@@ -1,16 +1,42 @@
 """
-Minimal model I/O utilities for Branch 1.
+Model I/O utilities for the ERA5 pipeline (Branch 2)
 
-Branch 1 uses a trivial baseline model (mean predictor), so model
-serialization is intentionally simple and relies solely on pickle.
-This keeps the artifact format lightweight and easy to inspect.
+Provides minimal, deterministic model serialization using pickle. This
+keeps artifact handling simple during Branch 2 while the modeling layer
+is still evolving (multiple model families, metadata-rich artifacts,
+and versioning planned).
 
-Branch 2 will introduce:
+Branch 2 Notes
+--------------
+Branch 2 introduces expanded modeling and evaluation, but model I/O
+remains intentionally lightweight:
+- pickle-only serialization
+- no registry integration
+- no versioned artifacts
+- no metadata embedding beyond what callers provide
+
+This module must remain side-effect-free and safe to import during
+pytest collection and `python -m` execution.
+
+Branch 3 Notes
+--------------
+Branch 3 will introduce:
 - a model registry
-- versioned artifacts
-- metadata-rich model files
-- support for multiple model classes
+- versioned, metadata-rich artifacts
 - safer serialization formats
+- lineage-aware model loading
+- optional AI/LLM/RAG tooling for model summaries and diagnostics
+
+These advanced features will live in separate modules and will not
+change the deterministic behavior of this minimal pickle-based loader.
+
+Invariant
+---------
+This module must remain:
+- deterministic
+- pickle-only
+- free of heavy dependencies
+- safe to import in all execution contexts
 """
 
 import pickle

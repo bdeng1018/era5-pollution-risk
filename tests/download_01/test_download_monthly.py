@@ -9,7 +9,6 @@ Aligned with REAL Stage‑1 behavior:
 """
 
 import json
-from pathlib import Path
 
 import pytest
 
@@ -53,14 +52,8 @@ def test_monthly_orchestrator(monkeypatch, tmp_path, year, month, variables):
             self.metadata_dir = tmp_path / "metadata"
             self.config_dir = tmp_path / "config"
 
-    monkeypatch.setattr(
-        "src.download_01.download_era5_monthly.Paths",
-        FakePaths
-    )
-    monkeypatch.setattr(
-        "src.download_01.download_era5_single.Paths",
-        FakePaths
-    )
+    monkeypatch.setattr("src.download_01.download_era5_monthly.Paths", FakePaths)
+    monkeypatch.setattr("src.download_01.download_era5_single.Paths", FakePaths)
 
     # --------------------------------------------------------------------------
     # Fake config.yml (Branch 2 uses YAML)
@@ -75,16 +68,13 @@ def test_monthly_orchestrator(monkeypatch, tmp_path, year, month, variables):
     # Monkeypatch config loaders
     # --------------------------------------------------------------------------
     monkeypatch.setattr(
-        "src.download_01.download_era5_monthly.load_variables",
-        lambda: variables
+        "src.download_01.download_era5_monthly.load_variables", lambda: variables
     )
     monkeypatch.setattr(
-        "src.download_01.download_era5_monthly.load_years",
-        lambda: [year]
+        "src.download_01.download_era5_monthly.load_years", lambda: [year]
     )
     monkeypatch.setattr(
-        "src.download_01.download_era5_monthly.load_months",
-        lambda: [month]
+        "src.download_01.download_era5_monthly.load_months", lambda: [month]
     )
 
     # --------------------------------------------------------------------------
@@ -98,38 +88,30 @@ def test_monthly_orchestrator(monkeypatch, tmp_path, year, month, variables):
         norm = NORMALIZED[var]
 
         # Simulate GRIB file (normalized)
-        grib = (
-            tmp_path
-            / "raw"
-            / "era5"
-            / yr
-            / mo
-            / norm
-            / f"{norm}_{yr}_{mo}.grib"
-        )
+        grib = tmp_path / "raw" / "era5" / yr / mo / norm / f"{norm}_{yr}_{mo}.grib"
         grib.parent.mkdir(parents=True, exist_ok=True)
         grib.write_text("fake grib")
 
         # Simulate metadata file
-        metadata = (
-            tmp_path
-            / "metadata"
-            / f"metadata_{var}_{yr}_{mo}.json"
+        metadata = tmp_path / "metadata" / f"metadata_{var}_{yr}_{mo}.json"
+        metadata.write_text(
+            json.dumps(
+                {
+                    "variable": var,
+                    "year": yr,
+                    "month": mo,
+                    "outfile": str(grib),
+                    "success": True,
+                    "config_valid": True,
+                }
+            )
         )
-        metadata.write_text(json.dumps({
-            "variable": var,
-            "year": yr,
-            "month": mo,
-            "outfile": str(grib),
-            "success": True,
-            "config_valid": True,
-        }))
 
         return grib
 
     monkeypatch.setattr(
         "src.download_01.download_era5_monthly.download_variable",
-        fake_download_variable
+        fake_download_variable,
     )
 
     # --------------------------------------------------------------------------
@@ -161,8 +143,6 @@ def test_monthly_orchestrator(monkeypatch, tmp_path, year, month, variables):
         assert grib.exists()
 
         metadata = (
-            tmp_path
-            / "metadata"
-            / f"metadata_{var}_{year}_{int(month):02d}.json"
+            tmp_path / "metadata" / f"metadata_{var}_{year}_{int(month):02d}.json"
         )
         assert metadata.exists()

@@ -29,12 +29,12 @@ Consumed by:
 import json
 from pathlib import Path
 
-import numpy as np
 import xarray as xr
 
 # ------------------------------------------------------------------------------
 # Utility functions
 # ------------------------------------------------------------------------------
+
 
 def _check_variable_shape(ds, var, expected_shape):
     """Check if variable matches expected tensor shape."""
@@ -63,6 +63,7 @@ def _detect_dtype_inconsistency(ds):
 # ------------------------------------------------------------------------------
 # Diagnostic entry point
 # ------------------------------------------------------------------------------
+
 
 def run_tensor_builder_diagnostic(dataset_path: str, output_path: str) -> None:
     """
@@ -121,9 +122,7 @@ def run_tensor_builder_diagnostic(dataset_path: str, output_path: str) -> None:
     # Degenerate tensor detection
     # --------------------------------------------------------------------------
 
-    degenerate = (
-        T == 0 or Y == 0 or X == 0 or V == 0
-    )
+    degenerate = T == 0 or Y == 0 or X == 0 or V == 0
 
     # --------------------------------------------------------------------------
     # Pass criteria

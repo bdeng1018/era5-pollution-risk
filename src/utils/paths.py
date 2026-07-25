@@ -2,12 +2,32 @@
 Paths Utility (Branch 2)
 ------------------------
 
-Branch 2 requirements:
-- All directory paths come from configs/paths.yml
-- project_root is resolved automatically (not from YAML)
-- No directory creation inside __init__
-- All attributes must be pathlib.Path objects (required by Stage 1–3 tests)
-- ERA5_BASE_DIR overrides project_root for Stage 2 test isolation
+Provides deterministic, side‑effect‑free path resolution for the ERA5
+pipeline. All directory paths are loaded from `configs/paths.yml` and
+resolved relative to the project root unless `ERA5_BASE_DIR` is set,
+which enables Stage 2 test isolation.
+
+Branch 2 Notes
+--------------
+- All directory paths originate from configs/paths.yml.
+- project_root is resolved automatically (never stored in YAML).
+- No directory creation occurs in this module.
+- All attributes must be pathlib.Path objects (required by Stage 1–3 tests).
+- ERA5_BASE_DIR overrides project_root for deterministic test isolation.
+
+Branch 3 Notes
+--------------
+Future AI/LLM/RAG tooling may read paths from this utility but will not
+modify deterministic path resolution. Any AI‑specific storage locations
+will live in separate modules to preserve Branch 2 invariants.
+
+Invariant
+---------
+This module must remain:
+- deterministic
+- side‑effect‑free
+- import‑safe during pytest collection
+- free of heavy dependencies
 """
 
 import os

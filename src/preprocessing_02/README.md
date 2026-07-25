@@ -1,10 +1,9 @@
 # preprocessing_02 — Stage 2 ERA5 GRIB → Parquet Pipeline (Branch 2)
 
 `preprocessing_02` implements the full **Stage 2** preprocessing pipeline for ERA5 data.
-Stage 2 transforms raw ERA5 GRIB files into **hourly** and **static** column‑oriented
-Parquet files ready for:
+Stage 2 transforms raw ERA5 GRIB files into **hourly** and **static** column‑oriented Parquet files ready for:
 
-- Stage 3 chunk planning and merge‑readiness checks
+- Stage 3 chunk planning
 - Stage 4 spatiotemporal alignment
 - Stage 5 feature engineering
 
@@ -16,14 +15,14 @@ Stage 2 is the bridge between raw meteorological archives and structured ML‑
 
 Stage 2 performs four core operations:
 
-1. **Unzip** ERA5 monthly ZIP bundles (optional, backward‑compatible)
-2. **Inspect** GRIB files (diagnostic-only)
-3. **Convert** GRIB → **HOURLY or STATIC Parquet**
-4. **Emit two metadata files**:
+1. **Inspect** GRIB files (diagnostic-only, IR₀)
+2. **Convert** GRIB → **HOURLY or STATIC Parquet**
+3. **Emit two metadata files**:
    - `grib_metadata.json` (diagnostic IR₀)
    - `metadata.json` (canonical IR₁)
+4. **Prepare intermediate directory layout** for Stage 3
 
-The Parquet dataset in `data/intermediate/` is consumed by Stage 3.
+ZIP ingestion is supported only for backward compatibility; Branch 2 uses GRIB‑only ingestion.
 
 ---
 
@@ -31,40 +30,49 @@ The Parquet dataset in `data/intermediate/` is consumed by Stage 3.
 
 ### Branch 1 — MVP Pipeline
 
-A minimal preprocessing workflow for early prototyping:
+A minimal preprocessing workflow:
 
-- Single‑variable GRIBs only
-- No ZIP ingestion
+- Single‑variable GRIBs
 - No metadata extraction
 - No parallelization
 - One GRIB → one Parquet
 
-Useful for early feature engineering and model experimentation.
+Useful for early experimentation.
 
-### Branch 2 — Full Production Pipeline
+### Branch 2 — Production‑Grade Preprocessing
 
-A robust, scalable preprocessing stage:
+A robust, scalable Stage 2 pipeline:
 
 - Multi‑variable GRIB support
-- GRIB metadata extraction
+- GRIB metadata extraction (IR₀)
 - `.idx` generation for fast cfgrib access
-- Schema and dimension validation
+- Schema + dimension validation
 - Filename → ERA5 shortName mapping
-- Hourly slicing and Parquet generation
+- Hourly slicing + Parquet generation
 - Static variable handling
-- Unified **hourly** `grib_metadata.json` (IR₀ diagnostic)
-- Unified **hourly** `metadata.json` (IR₁ canonical Parquet metadata)
-- Structured logging and error handling
+- Canonical Parquet metadata (IR₁)
+- Structured logging + error handling
 - Parallel conversion
-- Ready for Branch 3 parallelization
+- Deterministic directory layout
 
-Branch 2 is the first branch where Stage 2 becomes a real pipeline, not a collection of utilities.
+Branch 2 is the first branch where Stage 2 becomes a real pipeline.
+
+### Branch 3 - AI/LLM/RAG Enhancements (Future)
+
+Stage 2 remains deterministic, but Branch 3 may introduce:
+
+- LLM‑assisted GRIB diagnostics
+- RAG‑based metadata search
+- Natural‑language summaries of IR₀/IR₁
+- Agentic troubleshooting (“why did this GRIB fail conversion?”)
+
+These tools will live in separate modules and will not modify deterministic Stage 2 behavior.
 
 ---
 
 ## 📁 Folder Structure
 
-```markdown
+```text
 preprocessing_02/
 │
 ├── __init__.py
@@ -75,13 +83,13 @@ preprocessing_02/
 │
 ├── inspect_grib.py
 │   GRIB-level inspection (diagnostic-only)
-│   Writes grib_metadata.json
+│   Writes grib_metadata.json (IR₀)
 │
 ├── convert_grib_to_parquet.py
 │   GRIB → HOURLY or STATIC Parquet conversion
 │
 ├── metadata_parquet.py
-│   Canonical Parquet-only metadata.json builder (IR₁)
+│   Canonical Parquet metadata.json builder (IR₁)
 │
 └── run_preprocessing.py
     Unified Stage 2 orchestrator:
@@ -92,29 +100,25 @@ preprocessing_02/
 
 ## 🔧 How Stage 2 Works (Branch 2 Flow)
 
-```markdown
-era5_YYYY_MM.zip (optional)
-↓ unzip_grib.py
-era5_YYYY_MM.grib
+```text
+GRIB file
 ↓ inspect_grib.py
-grib_metadata.json (diagnostic)
+grib_metadata.json (IR₀ diagnostic)
 ↓ convert_grib_to_parquet.py
 <variable>_<timestamp>.parquet
 ↓ metadata_parquet.py
-metadata.json (canonical)
+metadata.json (IR₁ canonical)
 ↓
 data/intermediate/
 ```
 
-Single‑variable GRIBs follow the same flow but skip the ZIP step.
+ZIP ingestion is optional and used only for backward compatibility.
 
 ---
 
 ## 📦 Outputs
 
 ### Hourly Parquet Files (IR₁)
-
-Directory layout:
 
 ```code
 data/intermediate/<year>/<month>/<variable>/<variable>_<timestamp>.parquet
@@ -168,8 +172,7 @@ Stage 2 produces a **Parquet-only** metadata.json containing **only instantane
     "month": 1,
     "dtype": "float32",
     "shape": [721, 1440]
-  },
-  ...
+  }
 }
 ```
 
@@ -177,17 +180,17 @@ Stage 2 produces a **Parquet-only** metadata.json containing **only instantane
 
 - **Flux/accumulated variables**
 (`slhf`, `sshf`, `ssr`, `str`, `tp`, etc.)
-→ different grid + accumulated semantics → **excluded**
+→ accumulated semantics → excluded from IR₁
 
 - **Static variables**
 (`lsm`)
-→ no time dimension → **excluded**
+→ no time dimension → excluded from IR₁
 
 These variables are written to Parquet but **not** included in metadata.json.
 
 ### ✔ Stage 3 uses metadata.json exclusively
 
-GRIB metadata plays **no role** in Stage 3.
+GRIB metadata (IR₀) plays **no role** in Stage 3.
 
 This is the Stage 2 → Stage 3 contract.
 
@@ -206,13 +209,13 @@ This is the Stage 2 → Stage 3 contract.
 
 - Multi‑variable GRIB inspection tests
 - `.idx` generation tests
-- Schema and dimension validation
+- Schema + dimension validation
 - Multi‑variable conversion tests
 - Hourly slicing tests
 - Static variable handling tests
 - Full pipeline orchestration tests
 - `metadata.json` correctness tests
-- Stage 3‑readiness diagnostics (timestamp + grid alignment)
+- Stage 3‑readiness diagnostics
 
 ---
 
@@ -224,7 +227,7 @@ From the project root:
 python -m src.preprocessing_02.run_preprocessing
 ```
 
-or via Makefile:
+Or via Makefile:
 
 ```bash
 make preprocess
@@ -232,9 +235,11 @@ make preprocess
 
 Pipeline flow:
 
-```markdown
-unzip → inspect → convert → grib_metadata.json → metadata.json
+```code
+inspect → convert → grib_metadata.json → metadata.json
 ```
+
+ZIP extraction is optional.
 
 ---
 
@@ -244,10 +249,11 @@ unzip → inspect → convert → grib_metadata.json → metadata.json
 - Chunk‑based parallelization
 - Metadata lineage tracking
 - Automatic variable filtering
-- Spatial and temporal normalization
+- Spatial + temporal normalization
 - Multi‑variable merging
-- Pipeline run IDs and audit logs
+- Pipeline run IDs + audit logs
 - Environment validation (eccodes, cfgrib, xarray)
+- LLM-assisted diagnostics + summaries
 
 ---
 
@@ -255,7 +261,7 @@ unzip → inspect → convert → grib_metadata.json → metadata.json
 
 Stage 2 is intentionally modular:
 
-- Each operation is isolated (`unzip`, `inspect`, `convert`, `metadata`)
+- Each operation is isolated (`inspect`, `convert`, `metadata`)
 - The orchestrator (`run_preprocessing.py`) ties them together
 - Branch 3 parallelization wraps the orchestrator, not the utilities
 

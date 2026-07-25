@@ -14,7 +14,7 @@ Assumptions (Branch‑2, single‑variable mode):
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -24,7 +24,10 @@ import xarray as xr
 # LOAD CHUNK OUTPUTS
 # ------------------------------------------------------------------------------
 
-def load_chunk_outputs(chunk_specs: List[Any], config: Dict[str, Any]) -> Dict[str, List[xr.Dataset]]:
+
+def load_chunk_outputs(
+    chunk_specs: list[Any], config: dict[str, Any]
+) -> dict[str, list[xr.Dataset]]:
     """
     Load Stage‑3 parquet chunk outputs and convert them into xarray datasets.
 
@@ -32,7 +35,7 @@ def load_chunk_outputs(chunk_specs: List[Any], config: Dict[str, Any]) -> Dict[s
         Dict[var_name, List[xr.Dataset]] — datasets grouped by variable.
     """
 
-    grouped: Dict[str, List[xr.Dataset]] = {}
+    grouped: dict[str, list[xr.Dataset]] = {}
 
     for spec in chunk_specs:
         parquet_path = Path(spec.output_path)
@@ -71,7 +74,8 @@ def load_chunk_outputs(chunk_specs: List[Any], config: Dict[str, Any]) -> Dict[s
 # MERGE DATASETS
 # ------------------------------------------------------------------------------
 
-def merge_datasets(grouped: Dict[str, List[xr.Dataset]]) -> xr.Dataset:
+
+def merge_datasets(grouped: dict[str, list[xr.Dataset]]) -> xr.Dataset:
     """
     Merge grouped variable datasets into a unified spatiotemporal dataset.
     """
@@ -79,7 +83,7 @@ def merge_datasets(grouped: Dict[str, List[xr.Dataset]]) -> xr.Dataset:
     if not grouped:
         raise ValueError("No chunk datasets to merge")
 
-    per_var: Dict[str, xr.Dataset] = {}
+    per_var: dict[str, xr.Dataset] = {}
 
     # 1. Concat per variable
     for v, dsv in grouped.items():
@@ -106,7 +110,8 @@ def merge_datasets(grouped: Dict[str, List[xr.Dataset]]) -> xr.Dataset:
 # METADATA + QC
 # ------------------------------------------------------------------------------
 
-def build_merged_metadata(ds: xr.Dataset) -> Dict[str, Any]:
+
+def build_merged_metadata(ds: xr.Dataset) -> dict[str, Any]:
     return {
         "n_time": ds.sizes["time"],
         "n_lat": ds.sizes["lat"],
@@ -116,7 +121,7 @@ def build_merged_metadata(ds: xr.Dataset) -> Dict[str, Any]:
     }
 
 
-def build_merged_qc(ds: xr.Dataset) -> Dict[str, Any]:
+def build_merged_qc(ds: xr.Dataset) -> dict[str, Any]:
     qc = {}
     for var in ds.data_vars:
         qc[var] = {
@@ -131,11 +136,12 @@ def build_merged_qc(ds: xr.Dataset) -> Dict[str, Any]:
 # WRITE OUTPUTS
 # ------------------------------------------------------------------------------
 
+
 def write_outputs(
     ds: xr.Dataset,
-    metadata: Dict[str, Any],
-    qc: Dict[str, Any],
-    config: Dict[str, Any],
+    metadata: dict[str, Any],
+    qc: dict[str, Any],
+    config: dict[str, Any],
 ) -> None:
     merged_nc = Path(config["paths"]["stage3_merged"])
     merged_meta = Path(config["paths"]["stage3_metadata"])
@@ -156,7 +162,8 @@ def write_outputs(
 # HIGH-LEVEL MERGE ENTRYPOINT
 # ------------------------------------------------------------------------------
 
-def merge_chunks(chunk_specs: List[Any], config: Dict[str, Any]) -> xr.Dataset:
+
+def merge_chunks(chunk_specs: list[Any], config: dict[str, Any]) -> xr.Dataset:
     grouped = load_chunk_outputs(chunk_specs, config)
     ds_merged = merge_datasets(grouped)
 

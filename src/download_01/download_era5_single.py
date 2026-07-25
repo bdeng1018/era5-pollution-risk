@@ -48,7 +48,6 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Optional
 
 import cdsapi  # required for monkeypatching
 
@@ -105,13 +104,17 @@ client = cdsapi.Client(timeout=300)
 # Ensure raw/era5/<year>/<month>/<variable>/ exists before download.
 # ------------------------------------------------------------------------------
 
-def ensure_month_variable_dir(paths: Paths, year: str, month: str, variable: str) -> Path:
+
+def ensure_month_variable_dir(
+    paths: Paths, year: str, month: str, variable: str
+) -> Path:
     """
     Create raw/era5/<year>/<month>/<variable>/ directory.
     """
     target = Path(paths.raw_dir) / year / month / variable
     target.mkdir(parents=True, exist_ok=True)
     return target
+
 
 def validate_directories(paths: Paths) -> None:
     """
@@ -124,21 +127,25 @@ def validate_directories(paths: Paths) -> None:
     ]:
         Path(d).mkdir(parents=True, exist_ok=True)
 
+
 # ------------------------------------------------------------------------------
 # Environment validation
 # Ensures CDSAPI_URL and CDSAPI_KEY are present.
 # ------------------------------------------------------------------------------
 
+
 def validate_environment(paths: Paths) -> None:
     validate_directories(paths)
 
     if "CDSAPI_URL" not in os.environ or "CDSAPI_KEY" not in os.environ:
-        raise EnvironmentError("Missing CDS credentials")
+        raise OSError("Missing CDS credentials")
+
 
 # ------------------------------------------------------------------------------
 # Config validation (Branch 2 YAML)
 # Ensures years, months, and variables are present in config.yml.
 # ------------------------------------------------------------------------------
+
 
 def validate_config(paths: Paths) -> bool:
     config_file = Path(paths.config_dir) / "config.yml"
@@ -160,12 +167,14 @@ def validate_config(paths: Paths) -> bool:
         logger.warning(f"[stage1] Invalid config.yml: {e}")
         return False
 
+
 # ------------------------------------------------------------------------------
 # Retry wrapper for CDSAPI downloads
 # Retries up to 3 times with exponential backoff.
 # ------------------------------------------------------------------------------
 
-def download_with_retry(request: dict, outfile: Path) -> Optional[Path]:
+
+def download_with_retry(request: dict, outfile: Path) -> Path | None:
     max_attempts = 3
     delay = 1
 
@@ -182,13 +191,15 @@ def download_with_retry(request: dict, outfile: Path) -> Optional[Path]:
     logger.error(f"[stage1] Exhausted retries for {outfile}")
     return None
 
+
 # ------------------------------------------------------------------------------
 # Single‑variable GRIB download
 # Downloads one variable for one year‑month pair.
 # Writes metadata JSON regardless of success.
 # ------------------------------------------------------------------------------
 
-def download_variable(variable: str, year: str, month: str) -> Optional[Path]:
+
+def download_variable(variable: str, year: str, month: str) -> Path | None:
     logger.info(f"[stage1] Branch 2 download start: {variable} {year}-{month}")
 
     paths = Paths()
@@ -270,18 +281,22 @@ def download_variable(variable: str, year: str, month: str) -> Optional[Path]:
 # Iterates over variables × years × months from config.yml.
 # ------------------------------------------------------------------------------
 
+
 def main():
     variables = load_variables()
     years = load_years()
     months = load_months()
 
-    logger.info(f"[stage1] Starting Branch 2 ingestion: {len(variables)} variables, {len(years)} years, {len(months)} months")
+    logger.info(
+        f"[stage1] Starting Branch 2 ingestion: {len(variables)} variables, {len(years)} years, {len(months)} months"
+    )
 
     for variable in variables:
         for year in years:
             for month in months:
                 month_str = f"{int(month):02d}"
                 download_variable(variable, str(year), month_str)
+
 
 if __name__ == "__main__":
     main()

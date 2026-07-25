@@ -36,7 +36,6 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Dict, Optional, Tuple
 
 import pandas as pd
 
@@ -44,13 +43,21 @@ METADATA_PATH = Path("data/metadata/metadata.json")
 
 # ERA5 variable classes
 INSTANT_VARS = {
-    "blh", "cape", "cin", "d2m", "msl", "sp",
-    "t2m", "tcc", "tco3", "tcwv", "u10", "v10"
+    "blh",
+    "cape",
+    "cin",
+    "d2m",
+    "msl",
+    "sp",
+    "t2m",
+    "tcc",
+    "tco3",
+    "tcwv",
+    "u10",
+    "v10",
 }
 
-FLUX_VARS = {
-    "e", "slhf", "sshf", "ssr", "ssrc", "ssrd", "str", "tp"
-}
+FLUX_VARS = {"e", "slhf", "sshf", "ssr", "ssrc", "ssrd", "str", "tp"}
 
 STATIC_VARS = {"lsm"}
 
@@ -59,14 +66,15 @@ STATIC_VARS = {"lsm"}
 # Metadata loading (key‑indexed)
 # ------------------------------------------------------------------------------
 
-def load_metadata() -> Dict:
+
+def load_metadata() -> dict:
     if not METADATA_PATH.exists():
         raise FileNotFoundError("metadata.json missing")
     with open(METADATA_PATH, "r") as f:
         return json.load(f)
 
 
-def get_one_parquet_for_variable(metadata: Dict, var: str) -> Optional[str]:
+def get_one_parquet_for_variable(metadata: dict, var: str) -> str | None:
     """
     Return ONE parquet path for a variable by scanning key‑indexed metadata.
     """
@@ -80,7 +88,8 @@ def get_one_parquet_for_variable(metadata: Dict, var: str) -> Optional[str]:
 # Parquet coordinate extraction
 # ------------------------------------------------------------------------------
 
-def extract_coords(path: str) -> Optional[Tuple[pd.Series, pd.Series]]:
+
+def extract_coords(path: str) -> tuple[pd.Series, pd.Series] | None:
     try:
         df = pd.read_parquet(path)
         return df["latitude"], df["longitude"]
@@ -91,6 +100,7 @@ def extract_coords(path: str) -> Optional[Tuple[pd.Series, pd.Series]]:
 # ------------------------------------------------------------------------------
 # Alignment logic
 # ------------------------------------------------------------------------------
+
 
 def compare_arrays(ref: pd.Series, other: pd.Series):
     issues = []
@@ -108,7 +118,7 @@ def compare_arrays(ref: pd.Series, other: pd.Series):
     return issues
 
 
-def diagnose_alignment(metadata: Dict):
+def diagnose_alignment(metadata: dict):
     print("=== Coordinate Alignment Diagnostic (ERA5‑Correct) ===\n")
 
     # Extract reference instantaneous grid
@@ -172,10 +182,15 @@ def diagnose_alignment(metadata: Dict):
 # Main
 # ------------------------------------------------------------------------------
 
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--pct", type=float, default=100.0,
-                        help="Sampling percentage (unused in metadata-based diagnostic).")
+    parser.add_argument(
+        "--pct",
+        type=float,
+        default=100.0,
+        help="Sampling percentage (unused in metadata-based diagnostic).",
+    )
     args = parser.parse_args()
 
     metadata = load_metadata()
