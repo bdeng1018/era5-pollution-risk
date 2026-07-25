@@ -20,4 +20,4 @@ Branch 2 will add:
 """
 
 # Optional: expose the main entrypoint for convenience
-from .build_features import build_features
+from .build_features import build_features as build_features

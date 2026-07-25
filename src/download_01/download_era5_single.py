@@ -40,7 +40,9 @@ def download_variable(variable: str, year: str, month: str):
     Path or None
         Path to the saved GRIB file, or None if skipped.
     """
-    logger.info(f"Starting Branch 1 single-variable download: {variable} {year}-{month}")
+    logger.info(
+        f"Starting Branch 1 single-variable download: {variable} {year}-{month}"
+    )
 
     # Validate inputs
     variables = load_variables()
@@ -65,7 +67,9 @@ def download_variable(variable: str, year: str, month: str):
 
     # Skip logic
     if outfile.exists():
-        logger.info(f"Skipping {variable} {year}-{month}: file already exists → {outfile}")
+        logger.info(
+            f"Skipping {variable} {year}-{month}: file already exists → {outfile}"
+        )
         return None
 
     logger.info(f"Requesting ERA5 {variable} for {year}-{month} → {outfile}")
@@ -76,8 +80,8 @@ def download_variable(variable: str, year: str, month: str):
         "variable": variable,
         "year": year,
         "month": month,
-        "day": ["01"],          # minimal Branch 1 request
-        "time": ["00:00"],      # minimal Branch 1 request
+        "day": ["01"],  # minimal Branch 1 request
+        "time": ["00:00"],  # minimal Branch 1 request
         "format": "grib",
     }
 

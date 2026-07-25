@@ -1,6 +1,9 @@
 """
-CDS API Connectivity Test
+CDS API Connectivity Test — Branch 1 Diagnostics
+================================================
 
+Purpose
+-------
 This diagnostic script performs a minimal ERA5 data request to verify that the
 local environment is correctly configured for Climate Data Store (CDS) API
 access. It is not part of the pipeline and should be used only for debugging
@@ -12,10 +15,32 @@ It checks:
 - Functionality of the cdsapi Python client
 - Ability to retrieve and download a small ERA5 file
 
-Expected Output:
-    A file named 'test.nc' in the working directory.
+Expected Output
+---------------
+A file named 'test.nc' in the working directory.
 
 If this script succeeds, the full ERA5 monthly downloader will work.
+
+Branch 1 Constraints
+--------------------
+This diagnostic intentionally avoids:
+- synthetic fixtures
+- schema validation
+- metadata extraction
+- multi-variable ingestion
+- GRIB/ZIP/Parquet correctness
+
+It performs a single minimal request only to validate connectivity and
+authentication.
+
+Branch 2 Roadmap
+----------------
+Future diagnostics will introduce:
+- synthetic GRIB/ZIP fixtures
+- schema validation checks
+- metadata extraction diagnostics
+- ingestion correctness tests
+- deterministic path resolution diagnostics
 """
 
 import cdsapi
@@ -36,9 +61,19 @@ def run_test_request():
     -------
     None
         Downloads 'test.nc' to the working directory.
+
+    Notes
+    -----
+    This is intentionally minimal. It does not validate:
+    - GRIB/NetCDF schema correctness
+    - metadata extraction
+    - multi-variable ingestion
+    - skip-logic behavior
     """
+    # Initialize CDS API client using ~/.cdsapirc credentials.
     client = cdsapi.Client()
 
+    # Minimal ERA5 request for connectivity validation.
     request = {
         "product_type": "reanalysis",
         "variable": "2m_temperature",
@@ -56,7 +91,13 @@ def run_test_request():
 
 
 def main():
-    """Entry point for the CDS connectivity test."""
+    """
+    Entry point for the CDS connectivity test.
+
+    This function prints human-readable status messages and executes the
+    minimal request. It is intentionally simple to keep diagnostics clear and
+    environment-agnostic.
+    """
     print("\nStarting CDS API connectivity test...\n")
     run_test_request()
     print("\nAll checks passed. CDS API is functioning correctly.\n")

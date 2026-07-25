@@ -46,4 +46,4 @@ without committing to a full ML training framework yet.
 """
 
 # Optional: expose the main entrypoint for convenience
-from .train_model import train_model
+from .train_model import train_model as train_model

@@ -41,7 +41,7 @@ def get_logger(name: str) -> logging.Logger:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-            handlers=[RichHandler(rich_tracebacks=True)]
+            handlers=[RichHandler(rich_tracebacks=True)],
         )
 
     return logger
