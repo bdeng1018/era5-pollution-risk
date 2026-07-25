@@ -12,7 +12,6 @@ Branch 2 will add:
 """
 
 import cdsapi
-from pathlib import Path
 
 from src.utils.paths import Paths
 from src.utils.config import load_variables, load_years, load_months
@@ -25,6 +24,7 @@ client = cdsapi.Client()
 # ------------------------------------------------------------------------------
 # Branch 1 monthly downloader
 # ------------------------------------------------------------------------------
+
 
 def download_month(year: str, month: str):
     """

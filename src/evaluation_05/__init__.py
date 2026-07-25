@@ -26,4 +26,4 @@ Model artifacts are read from the top-level models/ directory (not data/),
 consistent with the project’s directory contract.
 """
 
-from .evaluate_model import evaluate_model
+from .evaluate_model import evaluate_model as evaluate_model

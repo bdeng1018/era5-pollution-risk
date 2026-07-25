@@ -1,81 +1,146 @@
 # ==============================================================================
-# ERA5 Pollution Risk Pipeline — Branch 1
-# Makefile for running each stage of the pipeline in sequence.
+# ERA5 Pollution‑Risk Pipeline — Branch 1
+# ==============================================================================
+# This Makefile provides a reproducible, stage‑driven interface for running the
+# ERA5 Pollution‑Risk pipeline. Branch 1 focuses on minimal ingestion, fast
+# smoke‑testing, and deterministic execution. No real GRIB/Parquet validation,
+# skip‑logic correctness, or multi‑variable ingestion occurs in this branch.
 #
-# This Makefile provides a simple, reproducible interface for:
-#   1. Validating the environment
-#   2. Downloading ERA5 data
-#   3. Converting GRIB → Parquet
-#   4. Building features
-#   5. Training a baseline model
-#   6. Evaluating model performance
+# Pipeline Stages (Branch 1)
+# --------------------------
+#   00. Environment validation
+#   01. ERA5 monthly download (mock‑friendly, minimal ingestion)
+#   02. GRIB → Parquet preprocessing (no schema validation)
+#   03. Feature engineering (no deterministic feature checks)
+#   04. Baseline model training (MeanPredictor)
+#   05. Evaluation + predictions (no artifact validation)
 #
-# Each stage depends on the previous one, ensuring correct execution order.
+# Developer Ergonomics
+# --------------------
+#   - help:        discover available targets
+#   - test:        run Branch 1 smoke tests
+#   - format/lint: CMS‑style code quality (Black + Ruff)
+#   - diagnostics: CDS API connectivity check
+#   - clean-cache: remove Python/pytest/ruff caches
+#   - reset:       remove intermediate artifacts (safe)
+#
+# Branch 1 Philosophy
+# -------------------
+# Keep everything fast, deterministic, and environment‑agnostic. Avoid:
+#   - real CDS API ingestion logic
+#   - schema/metadata validation
+#   - multi‑variable ingestion
+#   - GRIB/Parquet correctness checks
+#   - skip‑logic correctness
+#
+# Environment Requirements
+# ------------------------
+# Use .venv for all pipeline runs. Do NOT activate Conda unless using GRIB CLI tools.
+#
+# Branch 2 will introduce full ingestion validation, fixtures, schema checks,
+# metadata extraction, skip‑logic correctness, and multi‑variable ingestion.
 # ==============================================================================
 
-.PHONY: env download preprocess features train evaluate test all
+SHELL := /bin/bash
+PYTHON := .venv/bin/python
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# Help
+# ==============================================================================
+help: ## Show available Makefile targets
+	@echo ""
+	@echo "ERA5 Pollution‑Risk Pipeline — Branch 1"
+	@echo ""
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' Makefile | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+
+# ==============================================================================
 # Stage 00 — Environment validation
-# ------------------------------------------------------------------------------
-# Checks that required packages, directories, and configuration files exist.
-# This runs before any other stage to prevent pipeline failures.
-env:
-    python -m src.utils.env_check
+# ==============================================================================
+env: ## Validate Python environment, packages, and directory structure
+	$(PYTHON) -m src.utils.env_check
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Stage 01 — Download ERA5 data
-# ------------------------------------------------------------------------------
-# Downloads ERA5 monthly data using the CDS API.
-# Output: GRIB files stored in data/raw/era5/
-download: env
-    python -m src.download_01.download_era5_monthly
+# ==============================================================================
+download: env ## Download ERA5 monthly GRIB files (Branch 1: minimal ingestion)
+	$(PYTHON) -m src.download_01.download_era5_monthly
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Stage 02 — Preprocessing (GRIB → Parquet)
-# ------------------------------------------------------------------------------
-# 1. Unzips downloaded ERA5 archives
-# 2. Inspects GRIB metadata for correctness
-# 3. Converts GRIB → Parquet for downstream processing
-# Output: Parquet files stored in data/intermediate/
-preprocess: download
-    python -m src.preprocessing_02.unzip_grib
-    python -m src.preprocessing_02.inspect_grib
-    python -m src.preprocessing_02.convert_grib_to_parquet
+# ==============================================================================
+preprocess: download ## Unzip, inspect, and convert GRIB → Parquet (no schema validation)
+	$(PYTHON) -m src.preprocessing_02.unzip_grib
+	$(PYTHON) -m src.preprocessing_02.inspect_grib
+	$(PYTHON) -m src.preprocessing_02.convert_grib_to_parquet
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Stage 03 — Feature Engineering
-# ------------------------------------------------------------------------------
-# Builds derived features from intermediate Parquet files.
-# Output: features.parquet stored in data/features/
-features: preprocess
-    python -m src.features_03.build_features
+# ==============================================================================
+features: preprocess ## Build ML‑ready features (Branch 1: no deterministic checks)
+	$(PYTHON) -m src.features_03.build_features
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Stage 04 — Modeling
-# ------------------------------------------------------------------------------
-# Trains a baseline model using engineered features.
-# Output: model.pkl stored in models/
-train: features
-    python -m src.modeling_04.train_model
+# ==============================================================================
+train: features ## Train baseline MeanPredictor model (Branch 1: minimal modeling)
+	$(PYTHON) -m src.modeling_04.train_model
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Stage 05 — Evaluation
-# ------------------------------------------------------------------------------
-# Evaluates the trained model and generates metrics.
-# Output: predictions.parquet stored in data/predictions/
-evaluate: train
-    python -m src.evaluation_05.evaluate_model
+# ==============================================================================
+evaluate: train ## Evaluate model and generate predictions (Branch 1: no artifact validation)
+	$(PYTHON) -m src.evaluation_05.evaluate_model
 
-# ------------------------------------------------------------------------------
-# Run all tests
-# ------------------------------------------------------------------------------
-# Executes unit tests for each pipeline stage.
-test:
-    pytest -q
-
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Full pipeline (Stages 01 → 05)
-# ------------------------------------------------------------------------------
-# Runs the entire pipeline end‑to‑end.
-all: download preprocess features train evaluate
+# ==============================================================================
+all: download preprocess features train evaluate ## Run full ERA5 Branch 1 pipeline
+
+# ==============================================================================
+# Testing
+# ==============================================================================
+test: ## Run all Branch 1 smoke tests (imports + minimal execution)
+	pytest -q
+
+# ==============================================================================
+# Linting / Formatting (CMS‑style: Ruff + Black)
+# ==============================================================================
+format: ## Format code using Black + Ruff autofix
+	black src tests configs scripts/diagnostics
+	ruff check src tests configs scripts/diagnostics --fix
+
+lint: ## Run Ruff linting across the repo (excluding notebooks)
+	ruff check src tests configs scripts/diagnostics
+
+check: ## Run tests first, then lint (Branch 1 CI-style check)
+	pytest -q
+	ruff check src tests configs scripts/diagnostics
+
+# ==============================================================================
+# Diagnostics
+# ==============================================================================
+diagnostics: ## Run CDS API connectivity test (Branch 1: minimal external validation)
+	$(PYTHON) scripts/diagnostics/test_cds.py
+
+# ==============================================================================
+# Clean cache / temporary files
+# ==============================================================================
+clean-cache: ## Remove Python cache, pytest cache, ruff cache, and temp logs
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -type f -name "*.pyc" -delete
+	rm -rf .pytest_cache
+	rm -rf .ruff_cache
+	rm -rf data/temp/*
+	rm -rf data/logs/*
+	@echo "Cache cleaned."
+
+# ==============================================================================
+# Reset pipeline artifacts (safe)
+# ==============================================================================
+reset: clean-cache ## Remove intermediate, features, predictions, and model artifacts
+	rm -rf data/intermediate/*
+	rm -rf data/features/*
+	rm -rf data/predictions/*
+	rm -rf models/*
+	@echo "Pipeline reset complete (including cache cleanup)."
