@@ -19,7 +19,8 @@ Responsibilities
 - Clean illegal values safely (NaN → NaN, Inf → clipped)
 """
 
-from typing import Any, Dict, List, Mapping, Tuple
+from collections.abc import Mapping
+from typing import Any
 
 import numpy as np
 import xarray as xr
@@ -31,40 +32,50 @@ QC_OUTLIER_THRESHOLD = 1e4
 # ------------------------------------------------------------------------------
 
 PHYSICAL_RANGES = {
-    "t2m": (180, 330),      # Kelvin
+    "t2m": (180, 330),  # Kelvin
     "d2m": (180, 330),
-    "u10": (-100, 100),     # m/s
+    "u10": (-100, 100),  # m/s
     "v10": (-100, 100),
-    "msl": (900, 1100),     # hPa
-    "sp":  (800, 1100),     # hPa
-    "tcc": (0, 0.02),       # fractional cloud cover
-    "blh": (0, 5000),       # m
-    "cape": (0, 5000),      # J/kg
-    "cin": (0, 600),        # J/kg
-    "tco3": (0, 1),         # kg/m^2
-    "tcwv": (0, 100),       # kg/m^2
+    "msl": (900, 1100),  # hPa
+    "sp": (800, 1100),  # hPa
+    "tcc": (0, 0.02),  # fractional cloud cover
+    "blh": (0, 5000),  # m
+    "cape": (0, 5000),  # J/kg
+    "cin": (0, 600),  # J/kg
+    "tco3": (0, 1),  # kg/m^2
+    "tcwv": (0, 100),  # kg/m^2
 }
 
 # ------------------------------------------------------------------------------
 # Detection
 # ------------------------------------------------------------------------------
 
-def detect_nan(ds: xr.Dataset, fields: List[str]) -> int:
+
+def detect_nan(ds: xr.Dataset, fields: list[str]) -> int:
     return int(sum(np.isnan(ds[field].values).sum() for field in fields))
 
-def detect_inf(ds: xr.Dataset, fields: List[str]) -> int:
+
+def detect_inf(ds: xr.Dataset, fields: list[str]) -> int:
     return int(sum(np.isinf(ds[field].values).sum() for field in fields))
 
-def detect_outliers(ds: xr.Dataset, fields: List[str]) -> int:
-    return int(sum((np.abs(ds[field].values) > QC_OUTLIER_THRESHOLD).sum() for field in fields))
 
-def detect_all_zero(ds: xr.Dataset, fields: List[str]) -> List[str]:
+def detect_outliers(ds: xr.Dataset, fields: list[str]) -> int:
+    return int(
+        sum((np.abs(ds[field].values) > QC_OUTLIER_THRESHOLD).sum() for field in fields)
+    )
+
+
+def detect_all_zero(ds: xr.Dataset, fields: list[str]) -> list[str]:
     return [f for f in fields if np.all(ds[f].values == 0)]
 
-def detect_constant_fields(ds: xr.Dataset, fields: List[str]) -> List[str]:
+
+def detect_constant_fields(ds: xr.Dataset, fields: list[str]) -> list[str]:
     return [f for f in fields if np.nanstd(ds[f].values) == 0]
 
-def detect_physical_range_violations(ds: xr.Dataset, fields: List[str]) -> Dict[str, int]:
+
+def detect_physical_range_violations(
+    ds: xr.Dataset, fields: list[str]
+) -> dict[str, int]:
     violations = {}
     for f in fields:
         if f in PHYSICAL_RANGES:
@@ -75,7 +86,8 @@ def detect_physical_range_violations(ds: xr.Dataset, fields: List[str]) -> Dict[
                 violations[f] = count
     return violations
 
-def detect_temporal_jumps(ds: xr.Dataset, fields: List[str]) -> Dict[str, int]:
+
+def detect_temporal_jumps(ds: xr.Dataset, fields: list[str]) -> dict[str, int]:
     jumps = {}
     for f in fields:
         arr = ds[f].values
@@ -85,22 +97,28 @@ def detect_temporal_jumps(ds: xr.Dataset, fields: List[str]) -> Dict[str, int]:
             jumps[f] = count
     return jumps
 
-def detect_spatial_jumps(ds: xr.Dataset, fields: List[str]) -> Dict[str, int]:
+
+def detect_spatial_jumps(ds: xr.Dataset, fields: list[str]) -> dict[str, int]:
     jumps = {}
     for f in fields:
         arr = ds[f].values
         diff_lat = np.abs(np.diff(arr, axis=1))
         diff_lon = np.abs(np.diff(arr, axis=2))
-        count = int((diff_lat > QC_OUTLIER_THRESHOLD).sum() + (diff_lon > QC_OUTLIER_THRESHOLD).sum())
+        count = int(
+            (diff_lat > QC_OUTLIER_THRESHOLD).sum()
+            + (diff_lon > QC_OUTLIER_THRESHOLD).sum()
+        )
         if count > 0:
             jumps[f] = count
     return jumps
+
 
 # ------------------------------------------------------------------------------
 # Cleaning
 # ------------------------------------------------------------------------------
 
-def clean_dataset(ds: xr.Dataset, fields: List[str]) -> xr.Dataset:
+
+def clean_dataset(ds: xr.Dataset, fields: list[str]) -> xr.Dataset:
     ds_clean = ds.copy()
 
     for field in fields:
@@ -117,31 +135,41 @@ def clean_dataset(ds: xr.Dataset, fields: List[str]) -> xr.Dataset:
 
     return ds_clean
 
+
 # ------------------------------------------------------------------------------
 # Contract builder
 # ------------------------------------------------------------------------------
+
 
 def build_qc_contract(
     nan_count: int,
     inf_count: int,
     outlier_count: int,
-    zero_fields: List[str],
-    constant_fields: List[str],
-    physical_violations: Dict[str, int],
-    temporal_jumps: Dict[str, int],
-    spatial_jumps: Dict[str, int],
+    zero_fields: list[str],
+    constant_fields: list[str],
+    physical_violations: dict[str, int],
+    temporal_jumps: dict[str, int],
+    spatial_jumps: dict[str, int],
 ) -> Mapping[str, Any]:
 
     issues = []
 
-    if nan_count > 0: issues.append("nan_values")
-    if inf_count > 0: issues.append("inf_values")
-    if outlier_count > 0: issues.append("outliers")
-    if zero_fields: issues.append("all_zero_fields")
-    if constant_fields: issues.append("constant_fields")
-    if physical_violations: issues.append("physical_range_violations")
-    if temporal_jumps: issues.append("temporal_discontinuities")
-    if spatial_jumps: issues.append("spatial_discontinuities")
+    if nan_count > 0:
+        issues.append("nan_values")
+    if inf_count > 0:
+        issues.append("inf_values")
+    if outlier_count > 0:
+        issues.append("outliers")
+    if zero_fields:
+        issues.append("all_zero_fields")
+    if constant_fields:
+        issues.append("constant_fields")
+    if physical_violations:
+        issues.append("physical_range_violations")
+    if temporal_jumps:
+        issues.append("temporal_discontinuities")
+    if spatial_jumps:
+        issues.append("spatial_discontinuities")
 
     return {
         "qc_pass": len(issues) == 0,
@@ -156,11 +184,15 @@ def build_qc_contract(
         "spatial_jumps": spatial_jumps,
     }
 
+
 # ------------------------------------------------------------------------------
 # Entry point
 # ------------------------------------------------------------------------------
 
-def process_qc(ds: xr.Dataset, fields: List[str]) -> Tuple[xr.Dataset, Mapping[str, Any]]:
+
+def process_qc(
+    ds: xr.Dataset, fields: list[str]
+) -> tuple[xr.Dataset, Mapping[str, Any]]:
 
     nan_count = detect_nan(ds, fields)
     inf_count = detect_inf(ds, fields)

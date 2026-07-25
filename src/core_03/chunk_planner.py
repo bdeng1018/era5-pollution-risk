@@ -18,17 +18,17 @@ Single‑variable mode:
 """
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from src.core_03.chunk_spec import ChunkSpec
 
 
 class ChunkPlanner:
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         stage3 = config["stage3"]
 
         # Variables requested by config
-        self.requested_variables: List[str] = stage3["variables"]
+        self.requested_variables: list[str] = stage3["variables"]
 
         # Window parameters
         chunk_cfg = stage3["chunk"]
@@ -40,14 +40,14 @@ class ChunkPlanner:
         self.output_dir: Path = Path(paths_cfg["chunk_output_dir"])
 
         # Stage 2 metadata injected at build() time
-        self.metadata: Dict[str, Any] = {}
+        self.metadata: dict[str, Any] = {}
 
         self.config = config
 
     # --------------------------------------------------------------------------
     # Helper: compute merge‑eligible variables
     # --------------------------------------------------------------------------
-    def _compute_merge_eligible_variables(self) -> List[str]:
+    def _compute_merge_eligible_variables(self) -> list[str]:
         eligible = []
         meta_vars = self.metadata.get("variables", {})
 
@@ -60,9 +60,11 @@ class ChunkPlanner:
     # --------------------------------------------------------------------------
     # Build ChunkSpecs from Stage 2 metadata
     # --------------------------------------------------------------------------
-    def build(self, metadata: Dict[str, Any], dtypes: Dict[str, Any]) -> List[ChunkSpec]:
+    def build(
+        self, metadata: dict[str, Any], dtypes: dict[str, Any]
+    ) -> list[ChunkSpec]:
 
-        specs: List[ChunkSpec] = []
+        specs: list[ChunkSpec] = []
 
         # Reconstruct nested metadata structure
         variables = {}
@@ -97,7 +99,7 @@ class ChunkPlanner:
             return specs
 
         # 3. Build windows
-        windows: List[List[str]] = []
+        windows: list[list[str]] = []
         n = len(full_ts)
         i = 0
 

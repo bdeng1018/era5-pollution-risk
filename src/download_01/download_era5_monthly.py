@@ -53,7 +53,6 @@ from src.download_01.download_era5_single import download_variable
 from src.download_01.paths import Paths
 from src.utils.config import (
     load_months,
-    load_region,
     load_variables,
     load_years,
 )
@@ -66,6 +65,7 @@ logger = get_logger(__name__)
 # Ensures top-level directories exist and CDS credentials are present.
 # Stage 1 tests monkeypatch Paths(), so this must remain filesystem‑agnostic.
 # ------------------------------------------------------------------------------
+
 
 def validate_directories(paths: Paths) -> None:
     """
@@ -83,7 +83,8 @@ def validate_environment(paths: Paths) -> None:
     validate_directories(paths)
 
     if "CDSAPI_URL" not in os.environ or "CDSAPI_KEY" not in os.environ:
-        raise EnvironmentError("Missing CDS credentials")
+        raise OSError("Missing CDS credentials")
+
 
 # ------------------------------------------------------------------------------
 # Monthly Orchestrator (Branch 2)
@@ -91,6 +92,7 @@ def validate_environment(paths: Paths) -> None:
 # to the single‑variable downloader. This module performs no GRIB processing
 # itself; it only coordinates ingestion.
 # ------------------------------------------------------------------------------
+
 
 def main():
     """
@@ -116,6 +118,7 @@ def main():
             for month in months:
                 month_str = f"{int(month):02d}"
                 download_variable(variable, str(year), month_str)
+
 
 # ------------------------------------------------------------------------------
 # Entrypoint

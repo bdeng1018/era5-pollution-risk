@@ -35,6 +35,7 @@ import xarray as xr
 # Utility functions
 # ------------------------------------------------------------------------------
 
+
 def _count_nans(arr: np.ndarray) -> int:
     """Count NaN values."""
     return int(np.sum(np.isnan(arr)))
@@ -70,6 +71,7 @@ def _count_outliers(arr: np.ndarray, threshold: float = 5.0) -> int:
 # ------------------------------------------------------------------------------
 # Diagnostic entry point
 # ------------------------------------------------------------------------------
+
 
 def run_qc_diagnostic(dataset_path: str, output_path: str) -> None:
     """
@@ -124,7 +126,7 @@ def run_qc_diagnostic(dataset_path: str, output_path: str) -> None:
     qc_pass = (
         total_nan == 0
         and total_inf == 0
-        and total_outliers < 100   # configurable threshold
+        and total_outliers < 100  # configurable threshold
     )
 
     # ----------------------------------------------------------------------

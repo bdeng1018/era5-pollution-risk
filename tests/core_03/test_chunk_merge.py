@@ -44,21 +44,25 @@ def test_chunk_merge_small(tmp_path):
     chunk_a_path = tmp_path / "chunk_t2m.parquet"
     chunk_b_path = tmp_path / "chunk_tcwv.parquet"
 
-    df_a = pd.DataFrame({
-        "time": ["2023-09-01T11:00"],
-        "lat": [34.0],
-        "lon": [-118.0],
-        "t2m": [280.0],
-        "tcwv": [None],
-    })
+    df_a = pd.DataFrame(
+        {
+            "time": ["2023-09-01T11:00"],
+            "lat": [34.0],
+            "lon": [-118.0],
+            "t2m": [280.0],
+            "tcwv": [None],
+        }
+    )
 
-    df_b = pd.DataFrame({
-        "time": ["2023-09-01T23:00"],
-        "lat": [34.0],
-        "lon": [-118.0],
-        "t2m": [None],
-        "tcwv": [5.0],
-    })
+    df_b = pd.DataFrame(
+        {
+            "time": ["2023-09-01T23:00"],
+            "lat": [34.0],
+            "lon": [-118.0],
+            "t2m": [None],
+            "tcwv": [5.0],
+        }
+    )
 
     df_a.to_parquet(chunk_a_path)
     df_b.to_parquet(chunk_b_path)
@@ -85,19 +89,21 @@ def test_chunk_merge_small(tmp_path):
     # --------------------------------------------------------------------------
     # 3. Build schema
     # --------------------------------------------------------------------------
-    schema = ChunkSchema({
-        "schema": {
-            "columns": ["time", "lat", "lon", "t2m", "tcwv"],
-            "dtypes": {
-                "time": "string",
-                "lat": "float64",
-                "lon": "float64",
-                "t2m": "float64",
-                "tcwv": "float64",
-            },
-            "version": "1.0",
+    schema = ChunkSchema(
+        {
+            "schema": {
+                "columns": ["time", "lat", "lon", "t2m", "tcwv"],
+                "dtypes": {
+                    "time": "string",
+                    "lat": "float64",
+                    "lon": "float64",
+                    "t2m": "float64",
+                    "tcwv": "float64",
+                },
+                "version": "1.0",
+            }
         }
-    })
+    )
 
     # --------------------------------------------------------------------------
     # 4. Build config dict expected by merge_chunks()

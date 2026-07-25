@@ -11,8 +11,6 @@ Aligned with REAL Stage‑1 behavior:
 import json
 from pathlib import Path
 
-import pytest
-
 import src.download_01.download_era5_single as single_mod
 
 # Normalization map used by Stage‑1
@@ -25,6 +23,7 @@ NORMALIZED = {
 
 class FakeCDSClient:
     """Simulates CDSAPI retrieve() with controlled failures."""
+
     def __init__(self, fail_times):
         self.fail_times = fail_times
         self.calls = 0
@@ -75,13 +74,7 @@ def test_metadata_success(monkeypatch, tmp_path):
     norm = NORMALIZED["2m_temperature"]
 
     expected_grib = (
-        tmp_path
-        / "raw"
-        / "era5"
-        / "2023"
-        / "09"
-        / norm
-        / f"{norm}_2023_09.grib"
+        tmp_path / "raw" / "era5" / "2023" / "09" / norm / f"{norm}_2023_09.grib"
     )
     assert expected_grib.exists()
 

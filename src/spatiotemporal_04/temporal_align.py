@@ -17,7 +17,8 @@ Responsibilities
 - Do NOT interpolate values (interpolation is Stage 4 temporal_interpolate)
 """
 
-from typing import Any, Dict, List, Mapping, Tuple
+from collections.abc import Mapping
+from typing import Any
 
 import numpy as np
 import xarray as xr
@@ -26,6 +27,7 @@ import xarray as xr
 # Utility checks
 # ------------------------------------------------------------------------------
 
+
 def _is_strictly_ascending(arr: np.ndarray) -> bool:
     return bool(np.all(np.diff(arr) > 0))
 
@@ -33,6 +35,7 @@ def _is_strictly_ascending(arr: np.ndarray) -> bool:
 # ------------------------------------------------------------------------------
 # Normalization
 # ------------------------------------------------------------------------------
+
 
 def normalize_time(ds: xr.Dataset) -> xr.Dataset:
     """Ensure time is sorted ascending."""
@@ -45,6 +48,7 @@ def normalize_time(ds: xr.Dataset) -> xr.Dataset:
 # ------------------------------------------------------------------------------
 # Frequency detection
 # ------------------------------------------------------------------------------
+
 
 def compute_frequency(time: np.ndarray) -> str:
     """Compute dominant temporal frequency in hours."""
@@ -60,9 +64,10 @@ def compute_frequency(time: np.ndarray) -> str:
 # Missing timestamp detection
 # ------------------------------------------------------------------------------
 
-def detect_missing_timestamps(time: np.ndarray, freq_hours: int) -> List[str]:
+
+def detect_missing_timestamps(time: np.ndarray, freq_hours: int) -> list[str]:
     """Detect missing timestamps based on expected frequency."""
-    missing: List[str] = []
+    missing: list[str] = []
     diffs = np.diff(time).astype("timedelta64[h]").astype(int)
 
     for i, d in enumerate(diffs):
@@ -79,6 +84,7 @@ def detect_missing_timestamps(time: np.ndarray, freq_hours: int) -> List[str]:
 # Build aligned timestamps
 # ------------------------------------------------------------------------------
 
+
 def build_aligned_time(time: np.ndarray, freq_hours: int) -> np.ndarray:
     """Build evenly spaced aligned timestamps with same length as original."""
     start = time[0]
@@ -92,10 +98,11 @@ def build_aligned_time(time: np.ndarray, freq_hours: int) -> np.ndarray:
 # Dataset expansion
 # ------------------------------------------------------------------------------
 
+
 def expand_dataset_to_aligned_time(
     ds: xr.Dataset,
     aligned_time: np.ndarray,
-    fields: List[str],
+    fields: list[str],
 ) -> xr.Dataset:
     """
     Expand dataset to include missing timestamps.
@@ -119,10 +126,11 @@ def expand_dataset_to_aligned_time(
 # Contract builder
 # ------------------------------------------------------------------------------
 
+
 def build_temporal_contract(
     aligned_time: np.ndarray,
     frequency: str,
-    missing: List[str],
+    missing: list[str],
 ) -> Mapping[str, Any]:
     return {
         "aligned_time": aligned_time,
@@ -135,7 +143,8 @@ def build_temporal_contract(
 # Entry point
 # ------------------------------------------------------------------------------
 
-def process_temporal_alignment(ds: xr.Dataset, fields: List[str]):
+
+def process_temporal_alignment(ds: xr.Dataset, fields: list[str]):
     time = ds["time"].values
 
     # 1. Compute frequency

@@ -16,7 +16,7 @@ import json
 import logging
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import yaml
 
@@ -29,7 +29,8 @@ from src.core_03.chunk_worker import ChunkWorker
 # CONFIG LOADING
 # ------------------------------------------------------------------------------
 
-def load_config(config_path: str) -> Dict[str, Any]:
+
+def load_config(config_path: str) -> dict[str, Any]:
     with open(config_path, "r") as f:
         cfg = yaml.safe_load(f)
 
@@ -83,7 +84,8 @@ def load_config(config_path: str) -> Dict[str, Any]:
 # SPEC BUILDING (NO SHARED SCHEMA)
 # ------------------------------------------------------------------------------
 
-def build_specs(config: Dict[str, Any]) -> List[ChunkSpec]:
+
+def build_specs(config: dict[str, Any]) -> list[ChunkSpec]:
     metadata_path = Path(config["paths"]["metadata_dir"]) / "metadata.json"
     if not metadata_path.exists():
         raise FileNotFoundError(f"Missing metadata.json at {metadata_path}")
@@ -102,13 +104,14 @@ def build_specs(config: Dict[str, Any]) -> List[ChunkSpec]:
 # ORCHESTRATOR CLASS (NO SHARED SCHEMA)
 # ------------------------------------------------------------------------------
 
+
 class ChunkOrchestrator:
     def __init__(
         self,
         metadata_dir: Path,
         max_workers: int,
         max_retries: int,
-        logger: Optional[logging.Logger] = None,
+        logger: logging.Logger | None = None,
     ):
         self.metadata_dir = metadata_dir
         self.max_workers = max_workers
@@ -141,15 +144,14 @@ class ChunkOrchestrator:
     # Parallel execution
     # --------------------------------------------------------------------------
 
-    def run(self, specs: List[ChunkSpec]) -> List[ChunkSpec]:
-        results: List[ChunkSpec] = []
+    def run(self, specs: list[ChunkSpec]) -> list[ChunkSpec]:
+        results: list[ChunkSpec] = []
 
         self.logger.info(f"Starting Stage 3 with {len(specs)} chunks")
 
         with ProcessPoolExecutor(max_workers=self.max_workers) as executor:
             futures = {
-                executor.submit(self._run_with_retries, spec): spec
-                for spec in specs
+                executor.submit(self._run_with_retries, spec): spec for spec in specs
             }
 
             for future in as_completed(futures):
@@ -169,8 +171,10 @@ class ChunkOrchestrator:
 # CLI ENTRYPOINT
 # ------------------------------------------------------------------------------
 
+
 def main():
     import multiprocessing
+
     multiprocessing.set_start_method("spawn", force=True)
 
     parser = argparse.ArgumentParser(description="Stage 3 Chunk Orchestrator")

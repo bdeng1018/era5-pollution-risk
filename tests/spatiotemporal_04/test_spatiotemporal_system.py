@@ -20,7 +20,7 @@ import pickle
 import numpy as np
 import xarray as xr
 
-import src.spatiotemporal_04.driver as driver
+from src.spatiotemporal_04 import driver
 
 
 def test_stage4_system(tmp_path):
@@ -35,10 +35,8 @@ def test_stage4_system(tmp_path):
     lon = np.linspace(-130, -110, 8)
 
     time = np.array(
-        ["2020-01-01T00:00",
-         "2020-01-01T03:00",
-         "2020-01-01T07:00"],
-        dtype="datetime64[ns]"
+        ["2020-01-01T00:00", "2020-01-01T03:00", "2020-01-01T07:00"],
+        dtype="datetime64[ns]",
     )
 
     temp_data = np.random.rand(3, 10, 8)

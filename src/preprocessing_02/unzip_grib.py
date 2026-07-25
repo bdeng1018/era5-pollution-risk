@@ -43,6 +43,7 @@ logger = get_logger(__name__)
 # Extract a single ZIP → GRIB
 # ------------------------------------------------------------------------------
 
+
 def unzip_grib(zip_path: Path) -> Path:
     logger.info(f"[unzip] Extracting GRIB from {zip_path}")
 
@@ -88,6 +89,7 @@ def unzip_grib(zip_path: Path) -> Path:
 # Extract all ZIP files recursively under raw_dir
 # ------------------------------------------------------------------------------
 
+
 def unzip_all_months() -> list[Path]:
     paths = Paths()
     era5_dir = paths.raw_dir
@@ -111,6 +113,7 @@ def unzip_all_months() -> list[Path]:
 # ------------------------------------------------------------------------------
 # Stage 2 public API entrypoint
 # ------------------------------------------------------------------------------
+
 
 def main():
     try:

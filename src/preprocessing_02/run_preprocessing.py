@@ -101,6 +101,7 @@ logger = get_logger(__name__)
 # Logging setup
 # ------------------------------------------------------------------------------
 
+
 def setup_logging():
     paths = Paths()
     logs_dir = paths.logs_dir
@@ -122,6 +123,7 @@ def setup_logging():
 # Stage 2 success checker (per-GRIB conversion)
 # ------------------------------------------------------------------------------
 
+
 def stage2_success(meta: dict) -> bool:
     if not isinstance(meta, dict):
         return False
@@ -135,7 +137,6 @@ def stage2_success(meta: dict) -> bool:
         return False
 
     for var, parquet_map in variables.items():
-
         # Static variable (lsm)
         if meta.get("is_static", False):
             if "static" not in parquet_map:
@@ -167,6 +168,7 @@ def stage2_success(meta: dict) -> bool:
 # Step 1: Unzip monthly ZIP files
 # ------------------------------------------------------------------------------
 
+
 def step_unzip() -> list[Path]:
     logger.info("[stage2] Step 1: Unzipping monthly ZIP files")
     extracted = unzip_all_months()
@@ -177,6 +179,7 @@ def step_unzip() -> list[Path]:
 # ------------------------------------------------------------------------------
 # Step 2: Inspect GRIB files (diagnostic-only → grib_metadata.json)
 # ------------------------------------------------------------------------------
+
 
 def step_inspect() -> Path:
     logger.info("[stage2] Step 2: Inspecting GRIB files")
@@ -202,6 +205,7 @@ def step_inspect() -> Path:
 # Delete stale eccodes index files
 # ------------------------------------------------------------------------------
 
+
 def cleanup_idx_files():
     paths = Paths()
     raw_dir = paths.raw_dir
@@ -216,6 +220,7 @@ def cleanup_idx_files():
 # ------------------------------------------------------------------------------
 # Step 3: Convert GRIB → Parquet (parallel)
 # ------------------------------------------------------------------------------
+
 
 def step_convert_parallel() -> list[dict]:
     logger.info("[stage2] Step 3: Converting GRIB → Parquet (parallel)")
@@ -250,12 +255,14 @@ def step_convert_parallel() -> list[dict]:
                     raise ValueError("convert_grib_to_parquet returned None")
 
                 ok = stage2_success(meta)
-                results.append({
-                    "path": str(grib_path),
-                    "success": ok,
-                    "output": meta if ok else None,
-                    "raw_output": meta,
-                })
+                results.append(
+                    {
+                        "path": str(grib_path),
+                        "success": ok,
+                        "output": meta if ok else None,
+                        "raw_output": meta,
+                    }
+                )
 
                 if ok:
                     logger.info(
@@ -265,19 +272,19 @@ def step_convert_parallel() -> list[dict]:
                         f"static={meta.get('is_static', False)})"
                     )
                 else:
-                    logger.error(
-                        f"[stage2] INVALID METADATA → {grib_path.name}"
-                    )
+                    logger.error(f"[stage2] INVALID METADATA → {grib_path.name}")
 
             except Exception as e:
                 logger.error(f"[stage2] FAILED → {grib_path}: {e}")
-                results.append({
-                    "path": str(grib_path),
-                    "success": False,
-                    "error": str(e),
-                    "output": None,
-                    "raw_output": None,
-                })
+                results.append(
+                    {
+                        "path": str(grib_path),
+                        "success": False,
+                        "error": str(e),
+                        "output": None,
+                        "raw_output": None,
+                    }
+                )
 
     logger.info(f"[stage2] Converted {len(results)} GRIB files")
     return results
@@ -286,6 +293,7 @@ def step_convert_parallel() -> list[dict]:
 # ------------------------------------------------------------------------------
 # Step 4: Build Parquet-only HOURLY metadata.json
 # ------------------------------------------------------------------------------
+
 
 def step_build_parquet_metadata() -> Path:
     logger.info("[stage2] Step 4: Building Parquet-only metadata.json")
@@ -306,6 +314,7 @@ def step_build_parquet_metadata() -> Path:
 # ------------------------------------------------------------------------------
 # Main pipeline
 # ------------------------------------------------------------------------------
+
 
 def run_preprocessing():
     setup_logging()

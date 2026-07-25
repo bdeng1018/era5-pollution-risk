@@ -15,8 +15,8 @@
 #
 # Verify credentials:
 #
-#   echo $CDSAPI_URL
-#   echo $CDSAPI_KEY
+#   echo $$CDSAPI_URL
+#   echo $$CDSAPI_KEY
 #
 # Without these variables, Stage 1 (download) will fail immediately.
 #
@@ -47,110 +47,181 @@
 # - Branch 3 will introduce deployment targets (docker, fastapi, mlflow).
 # ==============================================================================
 
-.PHONY: env download preprocess core spatiotemporal features train evaluate test all clean-cache clean-pyc clean-idx clean-intermediate
+PYTHON := python
 
-# ------------------------------------------------------------------------------
-# Stage 00 — Environment validation
-# ------------------------------------------------------------------------------
-env:
-	python -m src.utils.env_check
+# ==============================================================================
+# Help — Self‑Documenting Makefile (Regex-Based)
+# ==============================================================================
+.PHONY: help
 
-# ------------------------------------------------------------------------------
-# Stage 01 — Download ERA5 data (Branch 2)
-# ------------------------------------------------------------------------------
-download: env
-	python -m src.download_01.download_era5_monthly --config configs/config.yml
+help:
+	@echo ""
+	@echo "ERA5 Pollution Risk Pipeline — Branch 2"
+	@echo "----------------------------------------"
+	@echo "Available Commands:"
+	@grep -E '^[a-zA-Z_-]+:.*##' Makefile | sed 's/:.*##/: /' | sort
+	@echo ""
 
-# ------------------------------------------------------------------------------
-# Stage 02 — Preprocessing (Branch 2)
-# ------------------------------------------------------------------------------
-preprocess: download
-    # Clean stale eccodes index files BEFORE preprocessing
+# ==============================================================================
+# Stage 00 — Environment Validation
+# ==============================================================================
+.PHONY: env
+env: ## Validate environment and required tools
+	$(PYTHON) -m src.utils.env_check
+
+# ==============================================================================
+# Stage 01 — ERA5 Download (GRIB)
+# ==============================================================================
+.PHONY: stage01 download
+stage01: download ## Run Stage 01 (ERA5 GRIB download)
+	@echo "Stage 01 complete."
+
+download: ## Download monthly ERA5 GRIB files
+	$(PYTHON) -m src.download_01.download_era5_monthly --config configs/config.yml
+
+# ==============================================================================
+# Stage 02 — Preprocessing
+# ==============================================================================
+.PHONY: stage02 preprocess
+stage02: preprocess ## Run Stage 02 (unzip → inspect → convert → metadata)
+	@echo "Stage 02 complete."
+
+preprocess: ## Run preprocessing pipeline
 	make clean-idx
-
-    # Clean Python caches BEFORE Stage 2
 	make clean-cache
-
-	python -m src.preprocessing_02.run_preprocessing --config configs/config.yml
-
-    # Clean stale eccodes index files AFTER preprocessing
+	$(PYTHON) -m src.preprocessing_02.run_preprocessing --config configs/config.yml
 	make clean-idx
-
-    # Clean Python caches AFTER Stage 2
 	make clean-cache
 
-# ------------------------------------------------------------------------------
-# Stage 03 — Chunked Core Processing (Branch 2)
-# ------------------------------------------------------------------------------
-core: preprocess
-    # Clear caches BEFORE Stage 3 (double safety)
+# ==============================================================================
+# Stage 03 — Chunked Core Processing
+# ==============================================================================
+.PHONY: stage03 core
+stage03: core ## Run Stage 03 (chunk planner → orchestrator → worker → merge)
+	@echo "Stage 03 complete."
+
+core: ## Execute chunked core processing
 	make clean-cache
+	$(PYTHON) -m src.core_03 --config configs/config.yml
 
-	python -m src.core_03 --config configs/config.yml
+# ==============================================================================
+# Stage 04 — Spatiotemporal Compiler
+# ==============================================================================
+.PHONY: stage04 spatiotemporal
+stage04: spatiotemporal ## Run Stage 04 (spatiotemporal compiler)
+	@echo "Stage 04 complete."
 
-# ------------------------------------------------------------------------------
-# Stage 04 — Spatiotemporal Compiler (Branch 2)
-# Note: Stage 4 is pure library code; no cache cleanup required.
-# ------------------------------------------------------------------------------
-spatiotemporal: core
-	python -m src.spatiotemporal_04.driver --config configs/config.yml
+spatiotemporal: ## Execute spatiotemporal compiler driver
+	$(PYTHON) -m src.spatiotemporal_04.driver --config configs/config.yml
 
-# ------------------------------------------------------------------------------
-# Stage 05 — Features (Branch 2 -- NOT Implemented Yet)
-# ------------------------------------------------------------------------------
-features:
-	@echo "Stage 5 features is not yet implemented in Branch 2."
+# ==============================================================================
+# Stage 05 — Feature Engineering (Placeholder)
+# ==============================================================================
+.PHONY: stage05 features
+stage05: features ## Run Stage 05 (feature engineering)
+	@echo "Stage 05 complete."
 
-# ------------------------------------------------------------------------------
-# Stage 06 — Modeling (Branch 2 -- NOT Implemented Yet)
-# ------------------------------------------------------------------------------
-train:
-	@echo "Stage 6 modeling is not yet implemented in Branch 2."
+features: ## Stage 5 not yet implemented
+	@echo "Stage 5 (features) is not yet implemented in Branch 2."
 
-# ------------------------------------------------------------------------------
-# Stage 07 — Evaluation (Branch 2 -- NOT Implemented Yet)
-# ------------------------------------------------------------------------------
-evaluate:
-	@echo "Stage 7 evaluation is not yet implemented in Branch 2."
+# ==============================================================================
+# Stage 06 — Modeling (Placeholder)
+# ==============================================================================
+.PHONY: stage06 train
+stage06: train ## Run Stage 06 (modeling)
+	@echo "Stage 06 complete."
 
-# ------------------------------------------------------------------------------
-# Run all tests (Branch 2)
-# ------------------------------------------------------------------------------
-test:
+train: ## Stage 6 not yet implemented
+	@echo "Stage 6 (modeling) is not yet implemented in Branch 2."
+
+# ==============================================================================
+# Stage 07 — Evaluation (Placeholder)
+# ==============================================================================
+.PHONY: stage07 evaluate
+stage07: evaluate ## Run Stage 07 (evaluation)
+	@echo "Stage 07 complete."
+
+evaluate: ## Stage 7 not yet implemented
+	@echo "Stage 7 (evaluation) is not yet implemented in Branch 2."
+
+# ==============================================================================
+# Stage 08 — Deployment (Placeholder)
+# ==============================================================================
+.PHONY: stage08 deploy
+stage08: deploy ## Run Stage 08 (deployment)
+	@echo "Stage 08 complete."
+
+deploy: ## Stage 8 reserved for Branch 3
+	@echo "Stage 8 (deployment) reserved for Branch 3."
+
+# ==============================================================================
+# Testing
+# ==============================================================================
+.PHONY: test
+test: ## Run test suite
 	pytest -q
 
-# ------------------------------------------------------------------------------
-# Full pipeline (Stages 01 → 07)
-# ------------------------------------------------------------------------------
-all: download preprocess core spatiotemporal
-	@echo "Stages 5–7 are not yet implemented in Branch 2."
+# ==============================================================================
+# Linting & Formatting
+# ==============================================================================
+.PHONY: lint format
+lint: ## Lint all relevant directories with Ruff
+	ruff check --fix src tests scripts configs models docs diagrams Makefile
 
-# ------------------------------------------------------------------------------
-# Clean Python caches (pyc + __pycache__ + pytest cache)
-# ------------------------------------------------------------------------------
-clean-cache:
+format: ## Format Python code (Black → Ruff)
+	black src tests scripts models
+	ruff format src tests scripts models
+
+# ==============================================================================
+# Full Pipeline — Stages 01–04
+# ==============================================================================
+.PHONY: run all
+run: stage01 stage02 stage03 stage04 ## Run full pipeline (Stages 01–04)
+	@echo "Full pipeline (Stages 01–04) complete."
+
+all: run ## Alias for full pipeline
+
+# ==============================================================================
+# Cleanup
+# ==============================================================================
+.PHONY: clean-cache clean-pyc clean-idx clean-intermediate \
+		clean-stage1 clean-stage2 clean-stage3 clean-stage4 \
+		reset-soft
+
+clean-cache: ## Remove caches (__pycache__, pytest, ruff)
 	find . -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	rm -rf .pytest_cache/
+	rm -rf .ruff_cache/
 
-# ------------------------------------------------------------------------------
-# Clean only Python bytecode caches
-# ------------------------------------------------------------------------------
-clean-pyc:
+clean-pyc: ## Remove Python bytecode
 	find . -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 
-# ------------------------------------------------------------------------------
-# Manual cleanup of stale eccodes index files
-# ------------------------------------------------------------------------------
-clean-idx:
+clean-idx: ## Remove GRIB index files
 	find data/raw/era5 -name "*.idx" -delete
 
-# ------------------------------------------------------------------------------
-# Clean intermediate data (intermediate, chunks, chunks_metadata, spatiotemporal)
-# ------------------------------------------------------------------------------
-clean-intermediate: clean-cache clean-pyc clean-idx
+clean-intermediate: clean-cache clean-pyc clean-idx ## Remove intermediate artifacts
 	rm -rf data/intermediate/*
-	rm -rf data/chunks/*.parquet
-	rm -rf data/chunks_metadata/*.json
+	rm -rf data/chunks/*
+	rm -rf data/chunks_metadata/*
 	rm -rf data/spatiotemporal/*
+	rm -rf data/features/*
+	rm -rf data/logs/*
+	rm -rf data/metadata/*
+	rm -rf data/predictions/*
+
+clean-stage1: ## Remove Stage 01 artifacts
+	rm -rf data/raw/era5/*/*.idx
+
+clean-stage2: ## Remove Stage 02 artifacts
+	rm -rf data/intermediate/*
+
+clean-stage3: ## Remove Stage 03 artifacts
+	rm -rf data/chunks/* data/chunks_metadata/*
+
+clean-stage4: ## Remove Stage 04 artifacts
+	rm -rf data/spatiotemporal/*
+
+reset-soft: clean-intermediate ## Soft reset (preserve raw GRIB)
+	@echo "Soft reset complete (raw GRIB preserved)."

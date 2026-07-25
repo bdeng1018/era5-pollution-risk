@@ -12,13 +12,15 @@ Purpose:
 import numpy as np
 import xarray as xr
 
-import src.spatiotemporal_04.grid as grid
-import src.spatiotemporal_04.mask as mask
-import src.spatiotemporal_04.metadata as metadata
-import src.spatiotemporal_04.qc as qc
-import src.spatiotemporal_04.temporal_align as temporal_align
-import src.spatiotemporal_04.temporal_interpolate as temporal_interpolate
-import src.spatiotemporal_04.tensor_builder as tensor_builder
+from src.spatiotemporal_04 import (
+    grid,
+    mask,
+    metadata,
+    qc,
+    temporal_align,
+    temporal_interpolate,
+    tensor_builder,
+)
 
 
 def test_stage4_acceptance():
@@ -33,11 +35,13 @@ def test_stage4_acceptance():
     lon = np.linspace(-130, -110, 8)
 
     time = np.array(
-        ["2020-01-01T00:00",
-         "2020-01-01T02:00",
-         "2020-01-01T05:00",
-         "2020-01-01T06:00"],
-        dtype="datetime64[ns]"
+        [
+            "2020-01-01T00:00",
+            "2020-01-01T02:00",
+            "2020-01-01T05:00",
+            "2020-01-01T06:00",
+        ],
+        dtype="datetime64[ns]",
     )
 
     temp_data = np.random.rand(4, 10, 8)

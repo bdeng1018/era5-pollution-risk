@@ -26,7 +26,7 @@ Consumed by:
 
 import json
 from pathlib import Path
-from typing import Tuple, cast
+from typing import cast
 
 import numpy as np
 import xarray as xr
@@ -35,6 +35,7 @@ from scipy.ndimage import label
 # ------------------------------------------------------------------------------
 # Utility functions
 # ------------------------------------------------------------------------------
+
 
 def _compute_valid_fraction(mask: np.ndarray) -> float:
     """Fraction of True values."""
@@ -69,16 +70,14 @@ def _count_holes(mask: np.ndarray) -> int:
 
 def _count_contiguous_regions(mask: np.ndarray) -> int:
     """Count contiguous True regions using connected-component labeling."""
-    labeled, num_regions = cast(
-        Tuple[np.ndarray, int],
-        label(mask.astype(int))
-    )
+    labeled, num_regions = cast(tuple[np.ndarray, int], label(mask.astype(int)))
     return num_regions
 
 
 # ------------------------------------------------------------------------------
 # Diagnostic entry point
 # ------------------------------------------------------------------------------
+
 
 def run_mask_diagnostic(dataset_path: str, output_path: str) -> None:
     """

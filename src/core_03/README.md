@@ -2,29 +2,76 @@
 
 <!-- markdownlint-disable MD033 -->
 
-Stage 3 implements the **deterministic, parallel‑safe chunk‑processing engine** that transforms Stage 2 preprocessed ERA5 data into stable, schema‑validated intermediate artifacts. These artifacts form the foundation for all downstream spatiotemporal structuring (Stage 4) and feature engineering (Stage 5).
+Stage 3 implements the **deterministic, parallel‑safe chunk‑processing engine** that transforms Stage 2 Parquet outputs into stable, schema‑validated intermediate artifacts. These artifacts form the foundation for:
 
-Stage 3 is the first **fully operational** transformation stage in the pipeline, producing both chunk‑level Parquet artifacts and a final merged dataset.
+- Stage 4 spatiotemporal alignment
+- Stage 5 feature engineering
+
+Stage 3 is the first **fully operational** transformation stage in the pipeline, producing both chunk‑level Parquet artifacts and a final merged dataset (`merged.nc`).
 
 ---
 
-## Stage 3 Scope (Branch 2)
+## 🎯 Stage 3 Scope (Branch 2)
 
 Stage 3 builds a clean, metadata‑driven processing layer:
 
-- **ChunkSpec** — atomic unit of work
-- **ChunkPlanner** — builds deterministic chunk lists
-- **ChunkWorker** — processes a single chunk
-- **ChunkSchema** — enforces column order + dtypes
-- **ChunkOrchestrator** — parallel execution engine
-- **ChunkMerge** — merges all chunk outputs into `merged.nc`
+- **[ChunkSpec](chunk_spec.py)** — atomic unit of work
+- **[ChunkPlanner](chunk_planner.py)** — deterministic chunk list builder
+- **[ChunkWorker](chunk_worker.py)** — processes a single chunk
+- **[ChunkSchema](chunk_schema.py)** — enforces column order + dtypes
+- **[ChunkOrchestrator](chunk_orchestrator.py)** — parallel execution engine
+- **[ChunkMerge](chunk_merge.py)** — merges all chunk outputs → `merged.nc`
 
 Branch 2 uses Python multiprocessing for parallel execution.
 Distributed execution arrives in Branch 3.
 
 ---
 
-## Config‑Driven Temporal Windowing
+## 🧭 Branch Philosophy
+
+### Branch 1 — MVP
+
+A minimal chunking prototype:
+
+- single‑variable chunks
+- no schema enforcement
+- no parallelization
+- no QC
+- no merged dataset
+
+Useful for early experimentation.
+
+### Branch 2 — Production‑Grade Chunk Engine
+
+A robust, deterministic Stage 3 pipeline:
+
+- config‑driven temporal windowing
+- multi‑variable chunking
+- schema enforcement (column order + dtype)
+- parallel chunk execution
+- chunk‑level metadata
+- chunk‑level QC
+- deterministic merge into `merged.nc`
+- stable IR₁ → IR₄ contract
+
+Stage 3 becomes a real engine, not a collection of utilities.
+
+### Branch 3 — Distributed + Intelligent Chunking (Future)
+
+Stage 3 remains deterministic, but Branch 3 may introduce:
+
+- Ray/Dask distributed execution
+- spatial tiling for large‑domain parallelism
+- chunk lineage + provenance
+- LLM‑assisted QC summaries
+- RAG‑based metadata search
+- agentic troubleshooting (“why did this chunk fail?”)
+
+These enhancements will live in separate modules and will not modify deterministic Stage 3 behavior.
+
+---
+
+## ⚙️ Config‑Driven Temporal Windowing
 
 Stage 3 chunking is controlled entirely by `config.yml`:
 
@@ -48,9 +95,9 @@ Each window produces **one ChunkSpec per variable**, using the **representative 
 
 ---
 
-## Choosing the Right Time‑Window Size
+## 🕒 Choosing the Right Time‑Window Size
 
-Temporal windowing is a critical design choice. Different window sizes produce different statistical, physical, and operational behaviors. The correct choice depends on your application domain.
+Temporal windowing determines the physical and statistical behavior of downstream features.
 
 ### 1‑Hour Windows — High‑Frequency Dynamics
 
@@ -171,6 +218,8 @@ Used in:
   </tbody>
 </table>
 
+Stage 3 supports all of these without code changes.
+
 ---
 
 ## File Structure
@@ -190,13 +239,13 @@ These six modules form the complete Stage 3 engine.
 
 ---
 
-## How Stage 3 Works
+## 🔧 How Stage 3 Works
 
-Stage 3 is a **two‑phase pipeline**.
+Stage 3 is a **two‑phase deterministic pipeline**.
 
 ### Phase 1 — Chunk Execution
 
-1. Load Stage 2 `metadata.json`
+1. Load Stage 2 `metadata.json` (IR₁)
 2. Build chunk specifications using config‑driven windowing
 3. Process each chunk independently:
 
@@ -225,24 +274,24 @@ This merged dataset is the required input for Stage 4.
 
 ---
 
-## Branch 3 Preview
+## 🔮 Branch 3 Preview
 
 Branch 3 expands Stage 3 with:
 
-- distributed execution backends (Ray, Dask)
-- spatial tiling strategies for large‑domain parallelism
+- distributed execution (Ray/Dask)
+- spatial tiling strategies
 - advanced retry + failure isolation
 - chunk lineage + provenance tracking
-- performance instrumentation + metrics
+- performance instrumentation
 - multi‑file chunk stitching + partitioning
 
-These enhancements build on the foundation established in Branch 2.
+These enhancements build on the deterministic foundation established in Branch 2.
 
 ---
 
-## Usage
+## ▶️ Running Stage 3
 
-Run Stage 3 via the Makefile:
+From project root:
 
 ```bash
 make core
@@ -256,7 +305,7 @@ python -m src.core_03 --config configs/config.yml
 
 After completion, Stage 3 produces:
 
-```markdown
+```code
 data/intermediate/
     merged.nc
     merged_metadata.json
@@ -267,9 +316,14 @@ These are consumed by Stage 4.
 
 ---
 
-## Notes
+## 📌 Notes
 
-Stage 3 is where the pipeline becomes **parallel**, **deterministic**, and **schema‑driven**.
+Stage 3 is where the pipeline becomes
+
+- **parallel**
+- **deterministic**
+- **schema‑driven**
+
 It establishes the structure that Stage 4 (spatiotemporal alignment) and Stage 5 (feature engineering) depend on.
 
 A clean, modular Stage 3 ensures the entire pipeline remains maintainable and scalable as complexity increases.

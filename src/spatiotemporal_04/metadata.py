@@ -17,7 +17,8 @@ Responsibilities
 - Produce deterministic metadata dictionary
 """
 
-from typing import Any, Dict, List, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 # ------------------------------------------------------------------------------
 # Schema definition
@@ -58,20 +59,24 @@ PROVENANCE_REQUIRED_FIELDS = ["source", "stage"]
 # Validation helpers
 # ------------------------------------------------------------------------------
 
-def _validate_block(name: str, block: Mapping[str, Any], required_fields: List[str]):
+
+def _validate_block(name: str, block: Mapping[str, Any], required_fields: list[str]):
     missing = [f for f in required_fields if f not in block]
     if missing:
         raise ValueError(
             f"[Stage 4][metadata] Missing required fields in '{name}': {missing}"
         )
 
-def _warn_if(condition: bool, message: str, warnings: List[str]):
+
+def _warn_if(condition: bool, message: str, warnings: list[str]):
     if condition:
         warnings.append(message)
+
 
 # ------------------------------------------------------------------------------
 # Validation
 # ------------------------------------------------------------------------------
+
 
 def validate_metadata(meta: Mapping[str, Any]) -> None:
     """
@@ -89,7 +94,7 @@ def validate_metadata(meta: Mapping[str, Any]) -> None:
                 f"got {type(meta[key]).__name__}"
             )
 
-    warnings: List[str] = []
+    warnings: list[str] = []
 
     # 2. Deep validation
     _validate_block("grid", meta["grid"], GRID_REQUIRED_FIELDS)
@@ -108,7 +113,9 @@ def validate_metadata(meta: Mapping[str, Any]) -> None:
     _warn_if(mask_meta["mask"] is None, "mask_array_none", warnings)
 
     temporal_meta = meta["temporal"]
-    _warn_if(len(temporal_meta["aligned_time"]) == 0, "temporal_empty_aligned_time", warnings)
+    _warn_if(
+        len(temporal_meta["aligned_time"]) == 0, "temporal_empty_aligned_time", warnings
+    )
 
     tensor_meta = meta["tensor"]
     _warn_if(tensor_meta["shape"] is None, "tensor_missing_shape", warnings)
@@ -122,9 +129,11 @@ def validate_metadata(meta: Mapping[str, Any]) -> None:
     if warnings:
         print("[Stage 4][metadata] warnings:", warnings)
 
+
 # ------------------------------------------------------------------------------
 # Construction
 # ------------------------------------------------------------------------------
+
 
 def build_metadata(
     grid_meta: Mapping[str, Any],
@@ -138,7 +147,7 @@ def build_metadata(
     Construct Stage 4 metadata in a deterministic, schema-consistent format.
     """
 
-    meta: Dict[str, Any] = {
+    meta: dict[str, Any] = {
         "grid": grid_meta,
         "mask": mask_meta,
         "qc": qc_meta,

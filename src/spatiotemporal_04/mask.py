@@ -23,8 +23,6 @@ Responsibilities
 - Do NOT modify temporal structure
 """
 
-from typing import Dict, List, Tuple
-
 import numpy as np
 import xarray as xr
 
@@ -32,7 +30,8 @@ import xarray as xr
 # Core mask computation
 # ------------------------------------------------------------------------------
 
-def compute_spatial_mask(ds: xr.Dataset, fields: List[str]) -> np.ndarray:
+
+def compute_spatial_mask(ds: xr.Dataset, fields: list[str]) -> np.ndarray:
     """
     Compute a boolean mask indicating valid spatial pixels.
 
@@ -62,13 +61,14 @@ def compute_spatial_mask(ds: xr.Dataset, fields: List[str]) -> np.ndarray:
 # Diagnostics
 # ------------------------------------------------------------------------------
 
+
 def compute_valid_fraction(mask: np.ndarray) -> float:
     total = mask.size
     valid = np.sum(mask)
     return float(valid / total)
 
 
-def detect_holes(mask: np.ndarray) -> List[Tuple[int, int]]:
+def detect_holes(mask: np.ndarray) -> list[tuple[int, int]]:
     holes = np.argwhere(~mask)
     return [(int(i), int(j)) for i, j in holes]
 
@@ -77,7 +77,8 @@ def detect_holes(mask: np.ndarray) -> List[Tuple[int, int]]:
 # Contract builder
 # ------------------------------------------------------------------------------
 
-def build_mask_contract(mask: np.ndarray) -> Dict:
+
+def build_mask_contract(mask: np.ndarray) -> dict:
     """
     Construct Stage 4 mask metadata contract.
     """
@@ -94,7 +95,8 @@ def build_mask_contract(mask: np.ndarray) -> Dict:
 # Mask application
 # ------------------------------------------------------------------------------
 
-def apply_mask(ds: xr.Dataset, mask: np.ndarray, fields: List[str]) -> xr.Dataset:
+
+def apply_mask(ds: xr.Dataset, mask: np.ndarray, fields: list[str]) -> xr.Dataset:
     """
     Apply the spatial mask to all fields.
 
@@ -126,10 +128,11 @@ def apply_mask(ds: xr.Dataset, mask: np.ndarray, fields: List[str]) -> xr.Datase
 # Entry point
 # ------------------------------------------------------------------------------
 
+
 def process_spatial_consistency(
-        ds: xr.Dataset,
-        fields: List[str],
-        ) -> Tuple[xr.Dataset, Dict]:
+    ds: xr.Dataset,
+    fields: list[str],
+) -> tuple[xr.Dataset, dict]:
     """
     Stage 4 mask invariant entry point.
 

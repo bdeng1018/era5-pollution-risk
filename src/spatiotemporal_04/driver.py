@@ -23,24 +23,26 @@ Outputs:
 
 import argparse
 import pickle
-from typing import Dict, List, Optional
 
 import xarray as xr
 import yaml
 
-import src.spatiotemporal_04.grid as grid
-import src.spatiotemporal_04.mask as mask
-import src.spatiotemporal_04.metadata as metadata
-import src.spatiotemporal_04.qc as qc
-import src.spatiotemporal_04.temporal_align as temporal_align
-import src.spatiotemporal_04.temporal_interpolate as temporal_interpolate
-import src.spatiotemporal_04.tensor_builder as tensor_builder
+from src.spatiotemporal_04 import (
+    grid,
+    mask,
+    metadata,
+    qc,
+    temporal_align,
+    temporal_interpolate,
+    tensor_builder,
+)
 
 # ------------------------------------------------------------------------------
 # CONFIG LOADER
 # ------------------------------------------------------------------------------
 
-def load_config(path: str) -> Dict:
+
+def load_config(path: str) -> dict:
     with open(path, "r") as f:
         return yaml.safe_load(f)
 
@@ -49,13 +51,14 @@ def load_config(path: str) -> Dict:
 # STAGE 4 EXECUTION
 # ------------------------------------------------------------------------------
 
+
 def run_stage4(
-    config: Optional[Dict] = None,
-    path: Optional[str] = None,
-    fields: Optional[List[str]] = None,
-    out_dataset: Optional[str] = None,
-    out_qc: Optional[str] = None,
-    out_meta: Optional[str] = None,
+    config: dict | None = None,
+    path: str | None = None,
+    fields: list[str] | None = None,
+    out_dataset: str | None = None,
+    out_qc: str | None = None,
+    out_meta: str | None = None,
 ):
     """
     Execute Stage 4 either via:
@@ -81,9 +84,9 @@ def run_stage4(
         assert out_meta is not None, "out_meta must be provided"
 
     # Pyright narrowing
-    from typing import List, cast
+    from typing import cast
 
-    fields = cast(List[str], fields)
+    fields = cast(list[str], fields)
     stage3_path = cast(str, stage3_path)
     out_dataset = cast(str, out_dataset)
     out_qc = cast(str, out_qc)

@@ -52,8 +52,7 @@ def test_download_single_variable(monkeypatch, tmp_path, variable, year, month):
         Path(outfile).write_text("fake grib")
 
     monkeypatch.setattr(
-        "src.download_01.download_era5_single.client.retrieve",
-        fake_retrieve
+        "src.download_01.download_era5_single.client.retrieve", fake_retrieve
     )
 
     # ----------------------------------------------------------------------
@@ -65,10 +64,7 @@ def test_download_single_variable(monkeypatch, tmp_path, variable, year, month):
             self.metadata_dir = tmp_path / "metadata"
             self.config_dir = tmp_path / "config"
 
-    monkeypatch.setattr(
-        "src.download_01.download_era5_single.Paths",
-        FakePaths
-    )
+    monkeypatch.setattr("src.download_01.download_era5_single.Paths", FakePaths)
 
     # ----------------------------------------------------------------------
     # Fake config.yml
@@ -90,13 +86,7 @@ def test_download_single_variable(monkeypatch, tmp_path, variable, year, month):
     norm = NORMALIZED[variable]
 
     expected_grib = (
-        tmp_path
-        / "raw"
-        / "era5"
-        / year
-        / month
-        / norm
-        / f"{norm}_{year}_{month}.grib"
+        tmp_path / "raw" / "era5" / year / month / norm / f"{norm}_{year}_{month}.grib"
     )
 
     assert result is not None

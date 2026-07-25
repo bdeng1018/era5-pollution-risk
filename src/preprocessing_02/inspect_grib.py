@@ -52,7 +52,6 @@ Stage 2 tests require:
 This module does *not* build metadata.json and does *not* influence IR₁.
 """
 
-
 from pathlib import Path
 
 from src.utils.logging import get_logger
@@ -64,6 +63,7 @@ logger = get_logger(__name__)
 # ------------------------------------------------------------------------------
 # Detect Branch 1 single‑variable GRIBs
 # ------------------------------------------------------------------------------
+
 
 def is_single_variable_grib(path: Path) -> bool:
     parts = path.stem.split("_")
@@ -83,8 +83,8 @@ def is_single_variable_grib(path: Path) -> bool:
 # Branch 1: Single‑variable GRIB inspection
 # ------------------------------------------------------------------------------
 
+
 def inspect_grib_single(grib_path: Path):
-    import cfgrib
     import xarray as xr
 
     if not is_single_variable_grib(grib_path):
@@ -96,6 +96,7 @@ def inspect_grib_single(grib_path: Path):
     filename_var = "_".join(parts[:-2])
 
     from src.preprocessing_02.convert_grib_to_parquet import FILENAME_TO_SHORTNAME
+
     shortname = FILENAME_TO_SHORTNAME.get(filename_var, filename_var)
 
     try:
@@ -131,6 +132,7 @@ def inspect_grib_single(grib_path: Path):
 # Branch 2: Multi‑variable GRIB inspection
 # ------------------------------------------------------------------------------
 
+
 def inspect_grib_multi(grib_path: Path) -> dict:
     import eccodes
 
@@ -138,8 +140,7 @@ def inspect_grib_multi(grib_path: Path) -> dict:
 
     try:
         index = eccodes.codes_index_new_from_file(
-            str(grib_path),
-            "shortName,dataDate,dataTime"
+            str(grib_path), "shortName,dataDate,dataTime"
         )
 
         variables = set()
@@ -196,7 +197,9 @@ def inspect_grib_multi(grib_path: Path) -> dict:
         }
 
     except Exception as e:
-        logger.error(f"[inspect] Failed to inspect multi-variable GRIB {grib_path}: {e}")
+        logger.error(
+            f"[inspect] Failed to inspect multi-variable GRIB {grib_path}: {e}"
+        )
         return {
             "path": str(grib_path),
             "variables": [],
@@ -210,6 +213,7 @@ def inspect_grib_multi(grib_path: Path) -> dict:
 # ------------------------------------------------------------------------------
 # Unified inspection entrypoint
 # ------------------------------------------------------------------------------
+
 
 def inspect_all_gribs(raw_dir: Path | str) -> list[dict]:
     raw_dir = Path(raw_dir)
@@ -231,6 +235,7 @@ def inspect_all_gribs(raw_dir: Path | str) -> list[dict]:
 # ------------------------------------------------------------------------------
 # Stage 2 public API entrypoint
 # ------------------------------------------------------------------------------
+
 
 def main():
     try:

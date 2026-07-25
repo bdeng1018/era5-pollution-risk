@@ -13,7 +13,7 @@ This test isolates the QC invariant only.
 import numpy as np
 import xarray as xr
 
-import src.spatiotemporal_04.qc as qc
+from src.spatiotemporal_04 import qc
 
 
 def test_qc_basic():
@@ -29,10 +29,8 @@ def test_qc_basic():
     lat = np.linspace(-10, 10, 5)
     lon = np.linspace(100, 120, 4)
     time = np.array(
-        ["2020-01-01T00:00",
-         "2020-01-01T01:00",
-         "2020-01-01T02:00"],
-        dtype="datetime64[ns]"
+        ["2020-01-01T00:00", "2020-01-01T01:00", "2020-01-01T02:00"],
+        dtype="datetime64[ns]",
     )
 
     # Introduce NaNs and outliers

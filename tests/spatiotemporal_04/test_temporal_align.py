@@ -13,7 +13,7 @@ This test isolates the temporal alignment invariant only.
 import numpy as np
 import xarray as xr
 
-import src.spatiotemporal_04.temporal_align as temporal_align
+from src.spatiotemporal_04 import temporal_align
 
 
 def test_temporal_alignment_basic():
@@ -31,18 +31,14 @@ def test_temporal_alignment_basic():
 
     # Create irregular timestamps
     time = np.array(
-        ["2020-01-01T00:00",
-         "2020-01-01T03:00",
-         "2020-01-01T07:00"],
-        dtype="datetime64[ns]"
+        ["2020-01-01T00:00", "2020-01-01T03:00", "2020-01-01T07:00"],
+        dtype="datetime64[ns]",
     )
 
     temp_data = np.random.rand(3, 5, 4)
 
     ds = xr.Dataset(
-        {
-            "temp": (("time", "lat", "lon"), temp_data)
-        },
+        {"temp": (("time", "lat", "lon"), temp_data)},
         coords={"time": time, "lat": lat, "lon": lon},
     )
 

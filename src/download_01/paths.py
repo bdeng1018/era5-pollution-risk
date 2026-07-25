@@ -59,6 +59,7 @@ from pathlib import Path
 # Provides deterministic directory defaults and supports monkeypatch overrides.
 # ------------------------------------------------------------------------------
 
+
 @dataclass
 class Paths:
     raw_dir: Path = Path("data/raw/era5")

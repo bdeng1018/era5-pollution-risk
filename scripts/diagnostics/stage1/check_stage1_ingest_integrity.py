@@ -45,6 +45,7 @@ REQUIRED_COLUMNS = {
 # Main diagnostic
 # ------------------------------------------------------------------------------
 
+
 def run_stage1_ingest_integrity(parquet_path: str, output_path: str) -> None:
     print("[Stage 1][ingest_integrity] Checking:", parquet_path)
 
@@ -151,6 +152,7 @@ def run_stage1_ingest_integrity(parquet_path: str, output_path: str) -> None:
 # Helper: save JSON report
 # ------------------------------------------------------------------------------
 
+
 def _save_report(report: dict, output_path: str) -> None:
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -161,7 +163,9 @@ def _save_report(report: dict, output_path: str) -> None:
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Stage 1 Ingestion Integrity Diagnostic")
+    parser = argparse.ArgumentParser(
+        description="Stage 1 Ingestion Integrity Diagnostic"
+    )
     parser.add_argument("--parquet", required=True, help="Path to Stage 1 parquet file")
     parser.add_argument("--output", required=True, help="Path to write JSON report")
 

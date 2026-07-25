@@ -15,17 +15,18 @@ dependencies:
   - numpy
   - pandas
   - xarray
-  - netcdf4 # Stage 3 merge (Dataset.to_netcdf)
-  - scipy # fallback netCDF engine + numerical routines
+  - netcdf4
+  - scipy
   - bottleneck
   - numba
+  - toolz
 
   # ============================================================================
   # ERA5 + GRIB Decoding
   # ============================================================================
   - cdsapi
-  - eccodes=2.33.0 # pinned for cfgrib compatibility
-  - cfgrib=0.9.10.4 # pinned for Python 3.10 + eccodes 2.33
+  - eccodes=2.33.0
+  - cfgrib=0.9.10.4
 
   # ============================================================================
   # Geospatial Stack
@@ -59,6 +60,8 @@ dependencies:
   # ============================================================================
   - dask
   - dask-core
+  # - dask[dataframe]
+  # - dask[array]
 
   # ============================================================================
   # Parquet + Cloud Storage
@@ -79,4 +82,9 @@ dependencies:
   - pip:
       - aiohttp
       - python-dotenv
-      - pyarrow
+      - pyarrow==17.0.0
+      # - pydantic
+      # - black
+      # - ruff
+      # - pre-commit
+      # - pytest-xdist

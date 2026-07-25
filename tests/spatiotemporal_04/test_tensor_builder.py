@@ -11,7 +11,7 @@ Purpose:
 import numpy as np
 import xarray as xr
 
-import src.spatiotemporal_04.tensor_builder as tensor_builder
+from src.spatiotemporal_04 import tensor_builder
 
 
 def test_tensor_builder_basic():
@@ -44,10 +44,8 @@ def test_tensor_builder_basic():
     # Synthetic temporal alignment contract
     # --------------------------------------------------------------------------
     aligned_time = np.array(
-        ["2020-01-01T00:00",
-         "2020-01-01T01:00",
-         "2020-01-01T02:00"],
-        dtype="datetime64[ns]"
+        ["2020-01-01T00:00", "2020-01-01T01:00", "2020-01-01T02:00"],
+        dtype="datetime64[ns]",
     )
 
     temporal_contract = {
@@ -71,9 +69,7 @@ def test_tensor_builder_basic():
     temp_data = np.random.rand(3, 5, 4)
 
     ds_interpolated = xr.Dataset(
-        {
-            "temp": (("time", "lat", "lon"), temp_data)
-        },
+        {"temp": (("time", "lat", "lon"), temp_data)},
         coords={"time": aligned_time, "lat": lat, "lon": lon},
     )
 

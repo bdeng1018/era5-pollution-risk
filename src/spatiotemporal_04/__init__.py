@@ -2,21 +2,49 @@
 Stage 4 – Spatiotemporal Compiler (Package Initializer)
 =======================================================
 
-This package consumes Stage 3 outputs:
+Consumes Stage 3 outputs and prepares the merged ERA5 dataset for
+deterministic IR₄ compilation. Stage 4 attaches metadata and QC
+artifacts as dataset attributes and provides a clean entry point for
+compiler modules.
 
+Inputs from Stage 3:
 - merged.nc              (xarray.Dataset: time × lat × lon × variables)
 - merged_metadata.json   (global metadata for the merged dataset)
 - merged_qc.json         (QC summary for all variables)
 
-High-level responsibilities:
-- Load Stage 3 merged.nc
-- Attach Stage 3 metadata and QC as dataset attributes
-- Provide a clean entry point for Stage 4 compiler modules
+Branch 2 Notes
+--------------
+Stage 4 is fully deterministic:
+- no side effects beyond reading Stage 3 artifacts
+- no directory creation
+- no heavy imports beyond xarray/json
+- safe to import during pytest collection
+- attaches metadata/QC as attrs for IR₄ invariants and provenance
+
+Branch 3 Notes
+--------------
+Future AI/LLM/RAG tooling may read Stage 4 outputs for:
+- metadata search
+- lineage exploration
+- natural‑language summaries
+- anomaly diagnostics
+
+These intelligent components will live in separate modules and will not
+modify deterministic Stage 4 behavior.
+
+Invariant
+---------
+This package initializer must remain:
+- minimal
+- deterministic
+- side‑effect‑free
+- import‑safe
 """
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Dict, Mapping
+from typing import Any, Dict
 
 import xarray as xr
 
@@ -49,8 +77,8 @@ def load_stage3_outputs(config: Mapping[str, Any]) -> xr.Dataset:
     meta_path = Path(config["paths"]["stage3_metadata"])
     qc_path = Path(config["paths"]["stage3_qc"])
 
-    metadata: Dict[str, Any] = {}
-    qc: Dict[str, Any] = {}
+    metadata: dict[str, Any] = {}
+    qc: dict[str, Any] = {}
 
     if meta_path.exists():
         with open(meta_path, "r") as f:

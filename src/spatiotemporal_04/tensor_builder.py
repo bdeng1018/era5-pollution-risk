@@ -15,7 +15,8 @@ Responsibilities
 - Do NOT modify spatial or temporal structure
 """
 
-from typing import Any, List, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 import numpy as np
 import xarray as xr
@@ -24,12 +25,13 @@ import xarray as xr
 # Tensor construction
 # ------------------------------------------------------------------------------
 
+
 def build_tensor_dataset(
     ds_interpolated: xr.Dataset,
     grid_contract: Mapping[str, Any],
     temporal_contract: Mapping[str, Any],
     mask_contract: Mapping[str, Any],
-    fields: List[str],
+    fields: list[str],
 ) -> xr.Dataset:
     """
     Construct canonical Stage 4 tensor dataset using real interpolated data.
@@ -40,7 +42,10 @@ def build_tensor_dataset(
     time = np.asarray(temporal_contract["aligned_time"])
     mask = np.asarray(mask_contract["mask"])
 
-    assert mask.shape == (lat.size, lon.size), "[Stage 4][tensor_builder] mask shape mismatch"
+    assert mask.shape == (
+        lat.size,
+        lon.size,
+    ), "[Stage 4][tensor_builder] mask shape mismatch"
 
     ds = xr.Dataset(coords={"time": time, "lat": lat, "lon": lon})
 
@@ -96,12 +101,13 @@ def build_tensor_dataset(
 # Entry point
 # ------------------------------------------------------------------------------
 
+
 def process_spatiotemporal_merge(
     ds_interpolated: xr.Dataset,
     grid_contract: Mapping[str, Any],
     mask_contract: Mapping[str, Any],
     temporal_contract: Mapping[str, Any],
-    fields: List[str],
+    fields: list[str],
 ) -> xr.Dataset:
     """
     Stage 4 tensor builder invariant entry point.

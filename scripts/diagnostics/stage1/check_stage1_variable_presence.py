@@ -33,15 +33,24 @@ import pandas as pd
 # ------------------------------------------------------------------------------
 
 REQUIRED_VARIABLES = [
-    "t2m", "d2m", "u10", "v10",
-    "msl", "sp", "tcc",
-    "blh", "cape", "cin",
-    "tco3", "tcwv",
+    "t2m",
+    "d2m",
+    "u10",
+    "v10",
+    "msl",
+    "sp",
+    "tcc",
+    "blh",
+    "cape",
+    "cin",
+    "tco3",
+    "tcwv",
 ]
 
 # ------------------------------------------------------------------------------
 # Main diagnostic
 # ------------------------------------------------------------------------------
+
 
 def run_stage1_variable_presence(stage1_dir: str, output_path: str) -> None:
     print("[Stage 1][variable_presence] Checking Stage 1 variable outputs")
@@ -102,29 +111,22 @@ def run_stage1_variable_presence(stage1_dir: str, output_path: str) -> None:
         nonempty = len(df) > 0
 
         # Timestamp presence
-        timestamps_present = (
-            "time" in df.columns and
-            df["time"].notna().any()
-        )
+        timestamps_present = "time" in df.columns and df["time"].notna().any()
 
         # Lat/Lon presence
         latlon_present = (
-            "latitude" in df.columns and df["latitude"].notna().any() and
-            "longitude" in df.columns and df["longitude"].notna().any()
+            "latitude" in df.columns
+            and df["latitude"].notna().any()
+            and "longitude" in df.columns
+            and df["longitude"].notna().any()
         )
 
         # Variable values
-        variable_nonempty = (
-            "value" in df.columns and
-            df["value"].notna().any()
-        )
+        variable_nonempty = "value" in df.columns and df["value"].notna().any()
 
         # Pass/fail
         presence_pass = (
-            nonempty and
-            timestamps_present and
-            latlon_present and
-            variable_nonempty
+            nonempty and timestamps_present and latlon_present and variable_nonempty
         )
 
         results[var] = {
@@ -150,7 +152,9 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Stage 1 Variable Presence Diagnostic")
-    parser.add_argument("--stage1", required=True, help="Path to Stage 1 output directory")
+    parser.add_argument(
+        "--stage1", required=True, help="Path to Stage 1 output directory"
+    )
     parser.add_argument("--output", required=True, help="Path to write JSON report")
 
     args = parser.parse_args()

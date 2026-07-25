@@ -35,6 +35,7 @@ import xarray as xr
 # Utility functions
 # ------------------------------------------------------------------------------
 
+
 def _is_monotonic(arr: np.ndarray) -> bool:
     """Check if array is strictly monotonic increasing."""
     return bool(np.all(np.diff(arr) > 0))
@@ -55,6 +56,7 @@ def _is_uniform_spacing(arr: np.ndarray, tol: float = 1e-6) -> bool:
 # ------------------------------------------------------------------------------
 # Diagnostic entry point
 # ------------------------------------------------------------------------------
+
 
 def run_grid_diagnostic(dataset_path: str, output_path: str) -> None:
     """

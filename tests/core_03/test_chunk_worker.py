@@ -11,7 +11,6 @@ ChunkWorker API:
 """
 
 import json
-from pathlib import Path
 
 import pandas as pd
 
@@ -39,29 +38,33 @@ def test_worker_full_pipeline(tmp_path):
     # 1. Create synthetic parquet input (must include full schema columns)
     # --------------------------------------------------------------------------
     input_path = tmp_path / "in.parquet"
-    df = pd.DataFrame({
-        "time": ["2023-09-01T11:00"],
-        "lat": [34.0],
-        "lon": [-118.0],
-        "t2m": [280.0],
-    })
+    df = pd.DataFrame(
+        {
+            "time": ["2023-09-01T11:00"],
+            "lat": [34.0],
+            "lon": [-118.0],
+            "t2m": [280.0],
+        }
+    )
     df.to_parquet(input_path)
 
     # --------------------------------------------------------------------------
     # 2. Build schema + ChunkSpec
     # --------------------------------------------------------------------------
-    schema = ChunkSchema({
-        "schema": {
-            "columns": ["time", "lat", "lon", "t2m"],
-            "dtypes": {
-                "time": "string",
-                "lat": "float64",
-                "lon": "float64",
-                "t2m": "float64",
-            },
-            "version": "1.0",
+    schema = ChunkSchema(
+        {
+            "schema": {
+                "columns": ["time", "lat", "lon", "t2m"],
+                "dtypes": {
+                    "time": "string",
+                    "lat": "float64",
+                    "lon": "float64",
+                    "t2m": "float64",
+                },
+                "version": "1.0",
+            }
         }
-    })
+    )
 
     chunk_id = "t2m_2023-09-01T11:00_12hr"
 
