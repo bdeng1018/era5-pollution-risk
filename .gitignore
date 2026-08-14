@@ -54,6 +54,8 @@ data/features/**/*.parquet
 data/features/*.parquet
 data/predictions/**/*.parquet
 data/predictions/*.parquet
+data/metadata/*.json
+data/metadata/
 
 # ==============================================================================
 # 7. Model artifacts (Branch 1 & future Branch 2)
