@@ -41,15 +41,15 @@ Branch 2 will introduce:
 - deterministic path resolution tests
 """
 
-# ----------------------------------------------------------------------
+# ==============================================================================
 # Branch 1 Constraints
-# ----------------------------------------------------------------------
+# ==============================================================================
 # These tests intentionally avoid executing any preprocessing logic.
 # They validate only that modules import cleanly, ensuring:
 # - no missing dependencies
 # - no circular imports
 # - no runtime errors during import
-# ----------------------------------------------------------------------
+# ==============================================================================
 
 
 def test_preprocess_import():
@@ -68,18 +68,18 @@ def test_preprocess_import():
     """
     # Import-only tests ensure that module-level code (logging setup,
     # path resolution, dependency imports) is stable and error-free.
+    import src.preprocessing_02.convert_grib_to_parquet
+    import src.preprocessing_02.inspect_grib
     import src.preprocessing_02.unzip_grib  # noqa: F401
-    import src.preprocessing_02.inspect_grib  # noqa: F401
-    import src.preprocessing_02.convert_grib_to_parquet  # noqa: F401
 
 
-# ----------------------------------------------------------------------
+# ==============================================================================
 # Branch 2 Roadmap
-# ----------------------------------------------------------------------
+# ==============================================================================
 # Future tests will add:
 # - GRIB fixtures for deterministic preprocessing
 # - schema validation for Parquet outputs
 # - metadata extraction correctness tests
 # - multi-variable ingestion tests
 # - path resolution and skip-logic correctness
-# ----------------------------------------------------------------------
+# ==============================================================================

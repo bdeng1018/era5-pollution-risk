@@ -24,8 +24,8 @@ Branch 2 will add:
 import zipfile
 from pathlib import Path
 
-from src.utils.paths import Paths
 from src.utils.logging import get_logger
+from src.utils.paths import Paths
 
 logger = get_logger(__name__)
 

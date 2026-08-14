@@ -38,15 +38,15 @@ Branch 2 will introduce:
 - deterministic feature shape tests
 """
 
-# ----------------------------------------------------------------------
+# ==============================================================================
 # Branch 1 Constraints
-# ----------------------------------------------------------------------
+# ==============================================================================
 # These tests intentionally avoid executing any feature-engineering logic.
 # They validate only that modules import cleanly, ensuring:
 # - no missing dependencies
 # - no circular imports
 # - no runtime errors during import
-# ----------------------------------------------------------------------
+# ==============================================================================
 
 
 def test_features_import():
@@ -66,17 +66,17 @@ def test_features_import():
     """
     # Import-only tests ensure that module-level code (logging setup,
     # feature registry loading, dependency imports) is stable and error-free.
-    import src.features_03.build_features  # noqa: F401
+    import src.features_03.build_features
     import src.features_03.feature_definitions  # noqa: F401
 
 
-# ----------------------------------------------------------------------
+# ==============================================================================
 # Branch 2 Roadmap
-# ----------------------------------------------------------------------
+# ==============================================================================
 # Future tests will add:
 # - feature registry validation
 # - schema validation for feature outputs
 # - transformation correctness tests
 # - multi-variable feature generation tests
 # - deterministic feature shape tests
-# ----------------------------------------------------------------------
+# ==============================================================================

@@ -20,7 +20,8 @@ Branch 2 will introduce:
     - spatial/temporal aggregations and multi-file feature generation
 """
 
-from typing import Callable, Dict
+from collections.abc import Callable
+
 import pandas as pd
 
 
@@ -33,7 +34,7 @@ def identity(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # Minimal Branch 1 feature registry
-FEATURES: Dict[str, Callable[[pd.DataFrame], pd.DataFrame]] = {
+FEATURES: dict[str, Callable[[pd.DataFrame], pd.DataFrame]] = {
     "identity": identity,
 }
 

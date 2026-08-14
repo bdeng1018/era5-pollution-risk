@@ -19,6 +19,7 @@ Branch 2 will introduce:
 """
 
 from pathlib import Path
+
 from src.utils.config import load_paths
 
 

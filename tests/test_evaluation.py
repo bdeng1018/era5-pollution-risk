@@ -38,15 +38,15 @@ Branch 2 will introduce:
 - multi-variable evaluation tests
 """
 
-# ----------------------------------------------------------------------
+# ==============================================================================
 # Branch 1 Constraints
-# ----------------------------------------------------------------------
+# ==============================================================================
 # These tests intentionally avoid executing any evaluation logic.
 # They validate only that evaluation modules import cleanly, ensuring:
 # - no missing dependencies
 # - no circular imports
 # - no runtime errors during import
-# ----------------------------------------------------------------------
+# ==============================================================================
 
 
 def test_evaluation_import():
@@ -65,17 +65,17 @@ def test_evaluation_import():
     """
     # Import-only tests ensure that module-level code (logging setup,
     # metric registry loading, dependency imports) is stable and error-free.
-    import src.evaluation_05.evaluate_model  # noqa: F401
+    import src.evaluation_05.evaluate_model
     import src.evaluation_05.metrics  # noqa: F401
 
 
-# ----------------------------------------------------------------------
+# ==============================================================================
 # Branch 2 Roadmap
-# ----------------------------------------------------------------------
+# ==============================================================================
 # Future tests will add:
 # - metric correctness tests
 # - prediction shape validation
 # - residual analysis tests
 # - artifact existence checks
 # - multi-variable evaluation tests
-# ----------------------------------------------------------------------
+# ==============================================================================

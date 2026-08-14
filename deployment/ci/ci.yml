@@ -1,0 +1,70 @@
+name: ERA5 Branch 1 CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  era5-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ========================================================================
+      # Checkout repository
+      # ========================================================================
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ========================================================================
+      # Set up Python
+      # ========================================================================
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # ========================================================================
+      # Install dependencies
+      # ========================================================================
+      - name: Install dependencies
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
+
+      # ========================================================================
+      # Lint
+      # ========================================================================
+      - name: Run Ruff linting
+        run: |
+          .venv/bin/ruff check src tests configs scripts/diagnostics
+
+      # ========================================================================
+      # Tests
+      # ========================================================================
+      - name: Run pytest
+        run: |
+          .venv/bin/pytest -q
+
+      # ========================================================================
+      # Diagnostics (CDS connectivity)
+      # ========================================================================
+      - name: Run diagnostics
+        run: |
+          .venv/bin/python scripts/diagnostics/test_cds.py
+
+      # ========================================================================
+      # Build Docker image (Branch 1)
+      # ========================================================================
+      - name: Build Docker image
+        run: |
+          docker build -t era5-branch1 -f deployment/Dockerfile .
+
+      # ========================================================================
+      # Validate Makefile pipeline (smoke test)
+      # ========================================================================
+      - name: Run Makefile smoke test
+        run: |
+          make env

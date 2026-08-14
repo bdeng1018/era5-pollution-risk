@@ -47,9 +47,9 @@ Branch 2 will introduce full ingestion validation, including:
 - deterministic path resolution tests
 """
 
-# ----------------------------------------------------------------------
+# ==============================================================================
 # Branch 1 Constraints
-# ----------------------------------------------------------------------
+# ==============================================================================
 # These tests intentionally avoid executing real ingestion logic.
 # They validate only:
 # - module import stability
@@ -57,81 +57,60 @@ Branch 2 will introduce full ingestion validation, including:
 # - logging behavior
 #
 # No real downloads, no skip-logic correctness, and no file assertions.
-# ----------------------------------------------------------------------
+# ==============================================================================
 
 import logging
-import cdsapi
+import sys
 from unittest.mock import MagicMock
+
 import pytest
 
 
 @pytest.fixture(autouse=True)
 def mock_cdsapi(monkeypatch):
     """
-    Automatically patch cdsapi.Client BEFORE importing any download modules.
+    Patch cdsapi.Client BEFORE any download modules import it.
 
     This ensures:
-    - no real CDS API calls are made
-    - no ~/.cdsapirc is required
-    - module import succeeds without network dependencies
-    - retrieve().download() behaves like a real client but remains mocked
-
-    Branch 1 requires this patch to keep tests deterministic and environment‑agnostic.
+    - no real CDS API calls
+    - no ~/.cdsapirc required
+    - module import succeeds even if cdsapi is not installed
     """
+
+    # Create a fake cdsapi module
+    fake_cdsapi = MagicMock()
+
+    # Mock Client() → returns a mock client
     mock_client = MagicMock()
 
-    # Mock retrieve() → returns an object with a .download() method
-    # This prevents AttributeError when pipeline code calls retrieve().download().
+    # Mock retrieve().download()
     mock_result = MagicMock()
     mock_result.download.return_value = None
     mock_client.retrieve.return_value = mock_result
 
-    monkeypatch.setattr(cdsapi, "Client", lambda: mock_client)
+    fake_cdsapi.Client = lambda: mock_client
+
+    # Insert fake module into sys.modules BEFORE imports occur
+    sys.modules["cdsapi"] = fake_cdsapi
 
 
 def test_download_single_smoke():
-    """
-    Smoke test: ensure the single-variable downloader executes without crashing.
-
-    Branch 1 guarantees only:
-    - module import succeeds
-    - function executes with mocked CDS API
-    - no real network or file operations occur
-    """
     from src.download_01.download_era5_single import download_variable
-
     download_variable("2m_temperature", "2023", "09")
 
 
 def test_download_monthly_smoke(caplog):
-    """
-    Smoke test: ensure the monthly downloader executes without crashing.
-
-    Branch 1 does NOT validate:
-    - skip‑logic correctness
-    - file existence behavior
-    - ZIP/GRIB output correctness
-
-    It only verifies:
-    - module import
-    - function execution
-    - logging behavior
-    """
     from src.download_01.download_era5_monthly import main as download_monthly
 
-    # Capture logs to confirm Branch 1 execution flow
     caplog.set_level(logging.INFO, logger="src.download_01.download_era5_monthly")
-
     download_monthly()
 
-    # Basic sanity check: pipeline start message appears in logs
-    log_text = caplog.text.lower()
-    assert "starting branch 1 era5 monthly downloads" in log_text
+    assert "starting branch 1 era5 monthly downloads" in caplog.text.lower()
 
 
-# ----------------------------------------------------------------------
+# ==============================================================================
 # Branch 2 Roadmap
-# ----------------------------------------------------------------------
+# ==============================================================================
 # Future tests will add:
 # - skip-logic correctness tests
 # - synthetic GRIB/ZIP fixtures
@@ -139,4 +118,4 @@ def test_download_monthly_smoke(caplog):
 # - metadata extraction tests
 # - multi-variable ingestion tests
 # - full CDS API mock suite (retrieve + download + error paths)
-# ----------------------------------------------------------------------
+# ==============================================================================

@@ -25,15 +25,15 @@ Branch 2 will introduce:
 - integration with feature metadata and transformation graphs
 """
 
-from pathlib import Path
 import pickle
+from pathlib import Path
+
 import pandas as pd
 
+from src.modeling_04.baseline_models import MeanPredictor
+from src.utils.config import load_model_config
 from src.utils.logging import get_logger
 from src.utils.paths import Paths
-from src.utils.config import load_model_config
-from src.modeling_04.baseline_models import MeanPredictor
-
 
 logger = get_logger(__name__)
 

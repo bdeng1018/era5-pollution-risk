@@ -14,9 +14,10 @@ Branch 2 will expand this with:
 """
 
 import cdsapi
-from src.utils.config import load_variables, load_years, load_months
-from src.utils.paths import Paths
+
+from src.utils.config import load_months, load_variables, load_years
 from src.utils.logging import get_logger
+from src.utils.paths import Paths
 
 logger = get_logger(__name__)
 client = cdsapi.Client()

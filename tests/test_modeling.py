@@ -38,15 +38,15 @@ Branch 2 will introduce:
 - configuration validation
 """
 
-# ----------------------------------------------------------------------
+# ==============================================================================
 # Branch 1 Constraints
-# ----------------------------------------------------------------------
+# ==============================================================================
 # These tests intentionally avoid executing any training logic.
 # They validate only that modeling modules import cleanly, ensuring:
 # - no missing dependencies
 # - no circular imports
 # - no runtime errors during import
-# ----------------------------------------------------------------------
+# ==============================================================================
 
 
 def test_model_import():
@@ -68,13 +68,13 @@ def test_model_import():
     import src.modeling_04.train_model  # noqa: F401
 
 
-# ----------------------------------------------------------------------
+# ==============================================================================
 # Branch 2 Roadmap
-# ----------------------------------------------------------------------
+# ==============================================================================
 # Future tests will add:
 # - model artifact existence checks
 # - deterministic training behavior tests
 # - prediction shape validation
 # - multi-model evaluation
 # - configuration validation
-# ----------------------------------------------------------------------
+# ==============================================================================
