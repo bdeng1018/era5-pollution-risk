@@ -49,8 +49,13 @@ data/raw/**/*.zip
 # 6. Intermediate pipeline artifacts
 # ==============================================================================
 data/intermediate/**/*.parquet
+data/intermediate/*.parquet
 data/features/**/*.parquet
+data/features/*.parquet
 data/predictions/**/*.parquet
+data/predictions/*.parquet
+data/metadata/*.json
+data/metadata/
 
 # ==============================================================================
 # 7. Model artifacts (Branch 1 & future Branch 2)
@@ -72,6 +77,7 @@ mlartifacts/
 # ==============================================================================
 *.tar
 *.img
+requirements-freeze.txt
 
 # ==============================================================================
 # 10. VS Code workspace settings (optional)

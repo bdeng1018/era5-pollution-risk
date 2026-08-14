@@ -20,8 +20,9 @@ Branch 2 will add:
     - error handling and retries
 """
 
-import xarray as xr
 from pathlib import Path
+
+import xarray as xr
 
 from src.utils.logging import get_logger
 from src.utils.paths import Paths

@@ -22,11 +22,12 @@ Branch 2 will introduce:
 """
 
 from pathlib import Path
+
 import pandas as pd
 
+from src.features_03.feature_definitions import FEATURES
 from src.utils.logging import get_logger
 from src.utils.paths import Paths
-from src.features_03.feature_definitions import FEATURES
 
 logger = get_logger(__name__)
 

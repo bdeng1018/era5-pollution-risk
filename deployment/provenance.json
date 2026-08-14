@@ -1,0 +1,100 @@
+{
+	"pipeline": "ERA5 Pollution‑Risk Pipeline",
+	"branch": "Branch 1",
+	"version": "v1.0.0",
+	"release_date": "2026-08-13",
+	"description": "Deterministic, minimal-ingestion ERA5 pipeline for smoke-testing ingestion, preprocessing, feature engineering, baseline modeling, and evaluation. Branch 1 intentionally avoids schema validation, metadata extraction, multi-variable ingestion, GRIB/Parquet correctness checks, and skip-logic correctness.",
+	"maintainer": {
+		"name": "Brian Deng",
+		"role": "ERA5 Pipeline Maintainer",
+		"location": "Walnut, CA, USA"
+	},
+	"environment": {
+		"python": "3.10",
+		"environment_file": "environment.yml",
+		"environment_type": "conda",
+		"environment_name": "era5",
+		"reproducible": true
+	},
+	"build": {
+		"makefile": "Makefile",
+		"dockerfile": "deployment/Dockerfile",
+		"ci_workflow": "deployment/ci/ci.yml",
+		"sbom": "deployment/SBOM.md",
+		"release_notes": "deployment/RELEASE_NOTES.md",
+		"deployment_doc": "deployment/DEPLOYMENT.md"
+	},
+	"stages": [
+		{
+			"id": "00",
+			"name": "Environment validation",
+			"module": "src.utils.env_check",
+			"deterministic": true
+		},
+		{
+			"id": "01",
+			"name": "ERA5 monthly download",
+			"module": "src.download_01.download_era5_monthly",
+			"deterministic": true,
+			"notes": "Mock-friendly minimal ingestion"
+		},
+		{
+			"id": "02",
+			"name": "GRIB → Parquet preprocessing",
+			"modules": [
+				"src.preprocessing_02.unzip_grib",
+				"src.preprocessing_02.inspect_grib",
+				"src.preprocessing_02.convert_grib_to_parquet"
+			],
+			"deterministic": true,
+			"notes": "No schema validation"
+		},
+		{
+			"id": "03",
+			"name": "Feature engineering",
+			"module": "src.features_03.build_features",
+			"deterministic": true,
+			"notes": "No deterministic feature checks"
+		},
+		{
+			"id": "04",
+			"name": "Baseline modeling",
+			"module": "src.modeling_04.train_model",
+			"deterministic": true,
+			"notes": "MeanPredictor baseline"
+		},
+		{
+			"id": "05",
+			"name": "Evaluation + predictions",
+			"module": "src.evaluation_05.evaluate_model",
+			"deterministic": true,
+			"notes": "No artifact validation"
+		}
+	],
+	"artifacts": {
+		"intermediate": "data/intermediate/",
+		"features": "data/features/",
+		"predictions": "data/predictions/",
+		"models": "models/",
+		"logs": "data/logs/",
+		"temp": "data/temp/"
+	},
+	"reset_behavior": {
+		"interactive": true,
+		"confirmation": "y/n",
+		"target": "make reset",
+		"safe": true
+	},
+	"limitations": [
+		"No real CDS ingestion logic",
+		"No schema validation",
+		"No metadata extraction",
+		"No multi-variable ingestion",
+		"No GRIB/Parquet correctness checks",
+		"No skip-logic correctness"
+	],
+	"roadmap": {
+		"branch_2": "Full ingestion validation, schema checks, metadata extraction, skip-logic correctness, multi-variable ingestion",
+		"branch_3": "Distributed ingestion, chunked GRIB processing, multi-model evaluation, agentic inference modules"
+	}
+}

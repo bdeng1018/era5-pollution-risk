@@ -20,8 +20,9 @@ Branch 2 will add:
     - multi-variable GRIB inspection
 """
 
-import xarray as xr
 from pathlib import Path
+
+import xarray as xr
 
 from src.utils.logging import get_logger
 

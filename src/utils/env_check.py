@@ -5,7 +5,7 @@ This module performs lightweight, fail-fast checks to ensure the runtime
 environment is correctly configured:
 
 - Python version (3.10+ required for cfgrib/eccodes compatibility)
-- Required packages (xarray, cfgrib, pyarrow, pandas, numpy)
+- Required packages (xarray, cfgrib, pyarrow, pandas, numpy, netCDF4, scipy)
 - Required directories (data/raw/era5, configs)
 - Interpreter is the project .venv (recommended)
 - Warn if a Conda environment is active
@@ -56,9 +56,6 @@ def check_directory(path: str | Path):
 # Virtual environment check
 # ==============================================================================
 def check_venv(expected: str = ".venv"):
-    """
-    Ensure the active interpreter is the project's virtual environment.
-    """
     interpreter = Path(sys.executable).resolve()
     if expected not in interpreter.as_posix():
         raise RuntimeError(
@@ -71,10 +68,6 @@ def check_venv(expected: str = ".venv"):
 # Conda warning (non-fatal)
 # ==============================================================================
 def warn_if_conda():
-    """
-    Warn the user if they are running inside a conda environment.
-    ERA5 Branch 1 uses a local .venv, not conda.
-    """
     if "CONDA_PREFIX" in os.environ:
         logger.warning(
             "Conda environment detected. ERA5 Branch 1 uses a local .venv.\n"
@@ -88,25 +81,49 @@ def warn_if_conda():
 # Main validation routine
 # ==============================================================================
 def validate_environment():
+    logger.info("Validating Python version...")
     check_python_version()
 
+    logger.info("Checking required Python packages...")
+
     required_packages = [
-        "xarray",
-        "cfgrib",
-        "pyarrow",
-        "pandas",
+        # Core scientific stack
         "numpy",
+        "pandas",
+        "xarray",
+        "netCDF4",
+        "scipy",
+        # ERA5 + climate tools
+        "cfgrib",
+        "eccodes",
+        # Parquet
+        "pyarrow",
+        # Utilities
+        "tqdm",
+        "requests",
+        "rich",
     ]
 
     for pkg in required_packages:
         check_package(pkg)
 
-    check_directory("data/raw/era5")
-    check_directory("configs")
+    logger.info("Checking directory structure...")
+
+    required_dirs = [
+        "data/raw/era5",
+        "configs",
+    ]
+
+    for d in required_dirs:
+        check_directory(d)
 
     warn_if_conda()
     check_venv()
 
+    logger.info("Environment validation passed.")
+
+    warn_if_conda()
+    check_venv()
 
 # ==============================================================================
 # Script entrypoint
@@ -116,4 +133,3 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.INFO)
 
     validate_environment()
-    logger.info("Environment validation passed.")
