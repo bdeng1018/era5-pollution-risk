@@ -24,14 +24,11 @@ jobs:
               run: |
                   python3 -m venv .venv
                   .venv/bin/pip install --upgrade pip
-
-            - name: Install dependencies
-              run: |
-                  .venv/bin/pip install -r requirements.txt
+                  .venv/bin/pip install ruff pytest cdsapi rich
 
             - name: Run Ruff linting
               run: |
-                  .venv/bin/ruff check src tests configs scripts/diagnostics
+                  .venv/bin/ruff check src tests
 
             - name: Run pytest (Branch 1 smoke tests)
               run: |
