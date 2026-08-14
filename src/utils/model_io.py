@@ -15,6 +15,7 @@ Branch 2 will introduce:
 
 import pickle
 from pathlib import Path
+from pickle import PicklingError, UnpicklingError
 
 
 def save_model(model, path: str | Path) -> None:
@@ -39,7 +40,7 @@ def save_model(model, path: str | Path) -> None:
     try:
         with open(p, "wb") as f:
             pickle.dump(model, f)
-    except Exception as e:
+    except (PicklingError, OSError) as e:
         raise TypeError(f"Failed to pickle model: {e}")
 
 
@@ -71,5 +72,5 @@ def load_model(path: str | Path):
     try:
         with open(p, "rb") as f:
             return pickle.load(f)
-    except Exception as e:
+    except (UnpicklingError, OSError) as e:
         raise RuntimeError(f"Failed to load model from {p}: {e}")

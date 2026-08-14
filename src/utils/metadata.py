@@ -17,7 +17,7 @@ Branch 2 will expand metadata to include:
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -44,7 +44,7 @@ def write_metadata(output_path: str | Path, info: dict) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
 
     # Add timestamp
-    info["timestamp"] = datetime.utcnow().isoformat()
+    info["timestamp"] = datetime.now(timezone.utc).isoformat()
 
     try:
         with open(p, "w") as f:

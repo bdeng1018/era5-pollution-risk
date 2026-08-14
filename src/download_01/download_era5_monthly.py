@@ -26,7 +26,6 @@ client = cdsapi.Client()
 # ==============================================================================
 
 
-
 def download_month(year: str, month: str):
     """
     Download ERA5 data for a single month (all variables).
