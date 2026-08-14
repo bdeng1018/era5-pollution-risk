@@ -24,7 +24,7 @@ jobs:
               run: |
                   python3 -m venv .venv
                   .venv/bin/pip install --upgrade pip
-                  .venv/bin/pip install ruff pytest cdsapi rich pyyaml pandas xarray netCDF4 scipy cfgrib eccodes
+                  .venv/bin/pip install ruff pytest cdsapi rich pyyaml pandas xarray netCDF4 scipy cfgrib eccodes pyarrow
 
             - name: Run Ruff linting
               run: |
