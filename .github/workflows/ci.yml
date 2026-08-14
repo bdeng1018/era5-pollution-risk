@@ -34,10 +34,6 @@ jobs:
               run: |
                   .venv/bin/pytest -q
 
-            - name: Run diagnostics (CDS API connectivity)
-              run: |
-                  .venv/bin/python scripts/diagnostics/test_cds.py
-
             - name: Build Docker image (optional)
               run: |
                   docker build -t era5-branch1 -f deployment/Dockerfile .
