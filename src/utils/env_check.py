@@ -56,6 +56,10 @@ def check_directory(path: str | Path):
 # Virtual environment check
 # ==============================================================================
 def check_venv(expected: str = ".venv"):
+    # Skip venv enforcement in CI
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        return
+
     interpreter = Path(sys.executable).resolve()
     if expected not in interpreter.as_posix():
         raise RuntimeError(
