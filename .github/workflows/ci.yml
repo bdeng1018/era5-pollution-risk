@@ -30,13 +30,13 @@ jobs:
               run: |
                   .venv/bin/ruff check src tests
 
+            - name: Run Ruff formatting (optional)
+              run: |
+                  .venv/bin/ruff format --check .
+
             - name: Run pytest (Branch 1 smoke tests)
               run: |
-                  .venv/bin/pytest -q
-
-            - name: Build Docker image (optional)
-              run: |
-                  docker build -t era5-branch1 -f deployment/Dockerfile .
+                  .venv/bin/pytest -q --disable-warnings
 
             - name: Validate Makefile pipeline (smoke test)
               run: |
