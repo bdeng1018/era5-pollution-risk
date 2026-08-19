@@ -5,37 +5,25 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) an
 
 ---
 
-## [Unreleased] — Branch 2 (Stages 01–08)
+## [Unreleased] — Branch 2 (Stages 05–08)
 
-### In Progress — Multi‑Stage ERA5 Pipeline (Deterministic, No AI)
+### Overview
 
-Branch 2 expands the ERA5 pipeline beyond the single‑variable MVP.
-The following components are currently in development:
+The Unreleased section tracks ongoing development for Branch 2, which extends the pipeline beyond ingestion and tensor compilation into feature engineering, modeling, evaluation, and deployment.
+Stages 01–04 are now frozen in v2.0.0; the remaining part of Branch 2 focuses on Stages 05–08.
 
-#### Stage 01 — Multi‑Variable ERA5 Ingestion
+### Planned — Multi‑Stage ERA5 Pipeline (Deterministic, No AI)
 
-- Support for multiple ERA5 variables (meteorology relevant to pollution risk)
-- Config‑driven variable selection
-- Parallelized monthly downloads
-- Improved skip logic and artifact tracking
-- GRIB metadata extraction (units, long_name, standard_name)
+#### Stage 05 — Feature Engineering
 
-#### Stage 02 — GRIB Metadata + Multi‑File Preprocessing
-
-- Multi‑variable GRIB → Parquet conversion
-- Structured intermediate directories (`intermediate/<year>/<month>/<var>`)
-- Validation of GRIB coordinate consistency (lat/lon grids, time indexing)
-- Enhanced inspection utilities and metadata parquet generation
-
-#### Stage 03 — Feature Engineering Expansion
-
-- Multi‑variable feature registry
-- Spatial + temporal aggregations
-- Rolling windows, lagged features, derived meteorological indicators
+- Multi‑variable feature registry (meteorology + pollution‑risk indicators)
+- Spatial aggregations (grid‑cell neighborhoods, lat/lon windows)
+- Temporal aggregations (rolling windows, lags, diurnal cycles)
+- Derived meteorological indicators (humidity, wind shear, stability indices)
 - Feature metadata (units, description, provenance)
 - Transformation graphs and dependency tracking
 
-#### Stage 04 — Modeling Expansion
+#### Stage 06 — Modeling
 
 - Multiple model families (linear, tree‑based, ensemble)
 - Config‑driven model selection
@@ -43,43 +31,120 @@ The following components are currently in development:
 - Deterministic training workflows
 - Versioned model artifacts
 - Model metadata + provenance
+- Hyperparameter search scaffolding (deterministic, no AI)
 
-#### Stage 05 — Evaluation Expansion
+#### Stage 07 — Evaluation
 
 - Full regression metrics (MAE, RMSE, R², MAPE)
 - Residual analysis
 - Diagnostic plots
 - Error distributions
 - Model comparison utilities
-
-#### Stage 06 — Reporting Layer
-
-- Model performance reports
-- Feature importance summaries
 - Dataset‑level diagnostics
-- Run metadata artifacts
-- Unified reporting outputs
 
-#### Stage 07 — Pipeline Runner
-
-- Unified orchestration of Stages 01–06
-- Run manifests
-- Deterministic execution guarantees
-- Multi‑stage validation
-
-#### Stage 08 — Deployment Scaffolding
+#### Stage 08 — Deployment / Reporting / Runner
 
 - Model registry integration
 - Artifact versioning
 - Packaging for downstream apps or dashboards
+- Unified reporting outputs
+- Pipeline runner for Stages 01–08
+- Deterministic execution guarantees
 - Deployment hooks reserved for Branch 3
 
 ### Notes
 
-- Branch 2 introduces multi‑variable ingestion, metadata tracking, expanded modeling, and evaluation.
+- The remaining part of Branch 2 introduces feature engineering, modeling, evaluation, and deployment.
 - Pipeline execution remains `.venv`‑based and deterministic.
-- No AI/RAG/LLM/agentic inference is planned for Branch 2.
+- No AI/RAG/LLM/agentic inference is planned for Branch 3.
 - Stages 05–08 are planned but not yet implemented.
+
+---
+
+## [2.0.0] — Branch 2 Artifact‑Frozen Release (Stages 01–04)
+
+### Overview
+
+v2.0.0 is the first fully reproducible, artifact‑frozen release of the ERA5 Pollution‑Risk ingestion engine.
+This version finalizes Stages 01–04 (Download → Preprocessing → Core Chunking → Spatiotemporal), introduces deterministic tensor compilation, and adds a scientific manifest documenting provenance, QC, and artifact lineage.
+
+### Added
+
+- Full artifact freezing under `artifacts/v2.0.0/`:
+  - **Stage 01 — Download:** monthly + single‑level GRIBs
+  - **Stage 02 — Preprocessing:** parquet + metadata
+  - **Stage 03 — Core Chunking:** merged.nc + chunk plan + chunk schema
+  - **Stage 04 — Spatiotemporal:** tensor.nc + metadata + QC + grid + mask + temporal diagnostics
+- Scientific `manifest.yml` including:
+  - commit SHA
+  - pipeline stages
+  - artifact paths
+  - tensor/grid shapes
+  - region bounding box
+  - requested vs. produced variables
+  - compiler contract
+  - QC status
+- Deterministic Stage 04 tensor compiler (hourly alignment, no interpolation)
+- Complete diagnostics suite for Stages 01–04
+- Tight LA Basin bounding box (33°–35°N, 116°–120°W)
+- Reproducible Makefile workflow for ingestion → preprocessing → merge → tensor
+
+### Changed
+
+- Updated pipeline architecture to modular 8‑stage design (Stages 01–08)
+- Standardized artifact directory structure for reproducibility
+- Improved GRIB metadata extraction and parquet normalization
+- Refined coordinate alignment and chunk merging logic
+- Updated README and documentation to reflect new architecture
+
+### Fixed
+
+- GRIB → Parquet inconsistencies for multi‑variable datasets
+- Timestamp normalization issues in Stage 02
+- Mask/grid mismatch in Stage 04 compiler
+- QC edge cases for missing hours
+- Makefile dependency ordering
+
+### Notes
+
+- v2.0.0 is the first version with complete scientific reproducibility guarantees.
+- Stages 05–08 (Features, Modeling, Evaluation, Deployment) will be introduced in Branch 3.
+- No AI/RAG/LLM components are included in Branch 2.
+
+---
+
+## [1.0.0] — Branch 2 Stabilization Release (Pre‑Freeze)
+
+### Overview
+
+v1.0.0 stabilizes Stages 01–04 before artifact freezing.
+This release finalizes multi‑variable ingestion, deterministic preprocessing, and core chunking, preparing the system for the v2.0.0 artifact freeze.
+
+### Added
+
+- Stable multi‑variable ERA5 ingestion (Stage 01 — Download)
+- Deterministic GRIB → Parquet preprocessing (Stage 02)
+- Structured intermediate directories (`intermediate/<year>/<month>/<var>`)
+- GRIB metadata parquet generation
+- Initial chunk planner + merge logic (Stage 03)
+- Early spatiotemporal compiler prototype (Stage 04)
+
+### Changed
+
+- Refined directory structure for ingestion + preprocessing
+- Improved skip logic and metadata extraction
+- Updated Makefile orchestration for deterministic execution
+
+### Fixed
+
+- GRIB coordinate consistency issues
+- Early merge instability for multi‑variable datasets
+- Logging inconsistencies across ingestion and preprocessing
+
+### Notes
+
+- v1.0.0 is the final “working pipeline” release before artifact freezing.
+- v2.0.0 introduces full reproducibility and scientific manifesting.
 
 ---
 
@@ -87,10 +152,10 @@ The following components are currently in development:
 
 ### Added
 
-- Stage 01: Multi‑variable ERA5 download (monthly GRIB ingestion)
-- Stage 02: GRIB unzip, inspect, convert, metadata parquet
-- Stage 03: Chunk planner, orchestrator, worker, merge
-- Stage 04: Spatiotemporal compiler (grid → mask → align → interpolate → qc → tensor builder)
+- **Stage 01 — Download:** Multi‑variable ERA5 ingestion
+- **Stage 02 — Preprocessing:** GRIB unzip, inspect, convert, metadata parquet
+- **Stage 03 — Core Chunking:** chunk planner, orchestrator, worker, merge
+- **Stage 04 — Spatiotemporal:** compiler (grid → mask → align → interpolate → qc → tensor builder)
 - Deterministic Makefile workflow (`make stage01` → `make stage04`)
 - VS Code workspace (tasks, launch, settings, extensions)
 - Unified logging across ingestion, preprocessing, chunking, and compiler
@@ -125,11 +190,11 @@ The following components are currently in development:
 
 ### Added
 
-- Stage 01: Single‑variable ERA5 ingestion (2m_temperature)
-- Stage 02: GRIB unzip, inspect, convert
-- Stage 03: Minimal feature registry
-- Stage 04: Baseline MeanPredictor model
-- Stage 05: Evaluation (MAE, RMSE)
+- **Stage 01 — Download:** Single‑variable ERA5 ingestion (2m_temperature)
+- **Stage 02 — Preprocessing:** GRIB unzip, inspect, convert
+- **Stage 03 — Core Chunking:** Minimal feature registry
+- **Stage 04 — Spatiotemporal:** Baseline MeanPredictor model
+- **Stage 05 — Features/Evaluation:** MAE, RMSE
 - Deterministic predictions + unified logging
 - Makefile orchestration (download → preprocess → features → train → evaluate)
 - Smoke‑test suite
