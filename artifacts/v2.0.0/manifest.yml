@@ -1,0 +1,122 @@
+version: "2.0.0"
+generated_at: "2026-08-18T20:16:00-07:00"
+schema_version: "1.0.0"
+
+git:
+  commit: "<INSERT_COMMIT_SHA>"
+  branch: "branch-2"
+  tag: "v2.0.0"
+
+pipeline:
+  stages:
+    - id: 1
+      name: "download_01"
+      description: "ERA5 monthly and single-level GRIB ingestion"
+    - id: 2
+      name: "preprocessing_02"
+      description: "GRIB → Parquet conversion, metadata extraction"
+    - id: 3
+      name: "core_03"
+      description: "Chunk planning, merging, and schema generation"
+    - id: 4
+      name: "spatiotemporal_04"
+      description: "Tensor compiler, QC, grid/mask, temporal alignment"
+
+artifacts:
+  stage1:
+    monthly_raw: "artifacts/v2.0.0/stage1/monthly_raw/"
+    single_raw: "artifacts/v2.0.0/stage1/single_raw/"
+
+  stage2:
+    parquet: "artifacts/v2.0.0/stage2/parquet/"
+    metadata: "artifacts/v2.0.0/stage2/metadata/"
+
+  stage3:
+    merged_nc: "artifacts/v2.0.0/stage3/merged.nc"
+    chunk_plan: "artifacts/v2.0.0/stage3/chunk_plan.json"
+    chunk_schema: "artifacts/v2.0.0/stage3/chunk_schema.json"
+
+  stage4:
+    tensor: "artifacts/v2.0.0/stage4/tensor.nc"
+    metadata: "artifacts/v2.0.0/stage4/metadata.json"
+    qc_report: "artifacts/v2.0.0/stage4/qc_report.json"
+    grid: "artifacts/v2.0.0/stage4/grid.json"
+    mask: "artifacts/v2.0.0/stage4/mask.json"
+    temporal_alignment: "artifacts/v2.0.0/stage4/temporal_alignment.json"
+    temporal_interpolation: "artifacts/v2.0.0/stage4/temporal_interpolation.json"
+
+summary:
+  variables:
+    [
+      "t2m",
+      "d2m",
+      "u10",
+      "v10",
+      "msl",
+      "sp",
+      "tcc",
+      "blh",
+      "cape",
+      "cin",
+      "tco3",
+      "tcwv",
+    ]
+  region: "north=35.0, south=33.0, west=-120.0, east=-116.0"
+  years: [2019, 2020, 2021, 2022, 2023, 2024]
+  months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+  tensor_shape: "(time=9128, lat=9, lon=17, variables=12)"
+  grid_shape: "(lat=9, lon=17)"
+  qc_status: "passed"
+
+provenance:
+  environment_file: "environment.yml"
+  configs:
+    - "configs/config.yml"
+    - "configs/era5.yml"
+    - "configs/paths.yml"
+    - "configs/region.yml"
+    - "configs/variables.yml"
+    - "configs/months.yml"
+    - "configs/years.yml"
+
+  requested_variables:
+    - "10m_u_component_of_wind"
+    - "10m_v_component_of_wind"
+    - "2m_dewpoint_temperature"
+    - "2m_temperature"
+    - "mean_sea_level_pressure"
+    - "surface_pressure"
+    - "total_precipitation"
+    - "surface_latent_heat_flux"
+    - "surface_net_solar_radiation"
+    - "surface_net_thermal_radiation"
+    - "surface_sensible_heat_flux"
+    - "surface_solar_radiation_downward_clear_sky"
+    - "surface_solar_radiation_downwards"
+    - "total_cloud_cover"
+    - "evaporation"
+    - "boundary_layer_height"
+    - "convective_available_potential_energy"
+    - "convective_inhibition"
+    - "land_sea_mask"
+    - "total_column_ozone"
+    - "total_column_water_vapour"
+
+  compiler_contract:
+    grid: "ECMWF regular lat/lon grid (0.25° resolution subset)"
+    mask: "binary land/sea mask applied at Stage 4"
+    temporal_alignment: "hourly alignment across 2019–2024"
+    interpolation: "no temporal interpolation applied"
+
+notes:
+  - "Stage 4 tensor built using src/spatiotemporal_04/tensor_builder.py"
+  - "QC passed all diagnostics in scripts/diagnostics/stage4/"
+  - "Bounding box corresponds to LA Basin region"
+
+validation:
+  status: "complete"
+  diagnostics:
+    stage1: "passed"
+    stage2: "passed"
+    stage3: "passed"
+    stage4: "passed"
