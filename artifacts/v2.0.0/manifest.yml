@@ -3,7 +3,7 @@ generated_at: "2026-08-18T20:16:00-07:00"
 schema_version: "1.0.0"
 
 git:
-  commit: "<INSERT_COMMIT_SHA>"
+  commit: "4963c8ab382330d9bd508ef2007b0b9f00aabe5f"
   branch: "branch-2"
   tag: "v2.0.0"
 
