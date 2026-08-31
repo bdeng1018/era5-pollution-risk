@@ -48,23 +48,24 @@ Stage 1 tests require:
 import os
 from pathlib import Path
 
+# ==============================================================================
+# Deterministic artifact hashing (C++ boundary module)
+# ==============================================================================
+from boundary_hash import sha256_file
+
 # Single-variable ingestion (Branch 2 core)
 from src.download_01.download_era5_single import download_variable
 from src.download_01.paths import Paths
-from src.utils.config import (
-    load_months,
-    load_variables,
-    load_years,
-)
+from src.utils.config import load_months, load_variables, load_years
 from src.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Directory + Environment Validation
 # Ensures top-level directories exist and CDS credentials are present.
 # Stage 1 tests monkeypatch Paths(), so this must remain filesystem‑agnostic.
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def validate_directories(paths: Paths) -> None:
@@ -86,12 +87,12 @@ def validate_environment(paths: Paths) -> None:
         raise OSError("Missing CDS credentials")
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Monthly Orchestrator (Branch 2)
 # Loads variables/years/months from YAML config and delegates each download
 # to the single‑variable downloader. This module performs no GRIB processing
 # itself; it only coordinates ingestion.
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def main():
@@ -100,6 +101,7 @@ def main():
     - Loads variables, years, months from YAML configs
     - Validates environment
     - Delegates each (variable, year, month) to download_era5_single.py
+    - Computes deterministic SHA‑256 digests for downloaded GRIB artifacts
     """
     paths = Paths()
     validate_environment(paths)
@@ -117,13 +119,22 @@ def main():
         for year in years:
             for month in months:
                 month_str = f"{int(month):02d}"
-                download_variable(variable, str(year), month_str)
+
+                # Perform the actual GRIB download
+                grib_path = download_variable(variable, str(year), month_str)
+
+                # Compute deterministic digest (if download succeeded)
+                if grib_path is not None:
+                    digest = sha256_file(str(grib_path))
+                    logger.info(
+                        f"[stage1] SHA256 digest for {grib_path.name}: {digest}"
+                    )
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Entrypoint
 # Required for Stage 1 public API stability and CLI execution.
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 if __name__ == "__main__":
     main()

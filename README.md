@@ -210,11 +210,83 @@ Stages 5–8 introduce analytics, ML, and deployment.
 ## 🧪 Testing Status
 
 | Stage | Status | Notes |
-|-------|--------|-------|
+| ------- | -------- | ------- |
 | Stage 1 | ⚠️ WIP | Some tests failing (expected) |
 | Stage 2 | ✅ Stable | Deterministic, restart-safe |
 | Stage 3 | ✅ Stable | Schema-validated, parallel-safe |
 | Stage 4 | ✅ Stable | Dense tensors, deterministic shapes |
+
+---
+
+## Operational Metrics (v2.0.0)
+
+### Preprocessing Latency
+
+- GRIB → Parquet conversion: **0.39 sec/file** (1512 files in 9 min 50 sec)
+- Metadata extraction: **0.00095 sec/entry** (618,864 entries in 9 min 46 sec)
+- GRIB inspection throughput: **292 files/sec** (1512 files in 5.18 sec)
+
+### Chunk Engine Performance
+
+- Chunk merge time: **0.45 sec/chunk (median)**
+- Worker parallelism: **6 workers**
+- Deterministic chunk boundaries: 100%
+- NaN footprint (pre‑QC): **55,080 instantaneous**, **1.38M flux**
+- Post‑QC NaNs: **0**
+
+### Spatiotemporal Compiler
+
+- Tensor build time: **7 sec/tensor (median)**
+- Memory footprint: **128 MB**
+- Tensor shape: **(9128, 9, 17, 12)**
+
+### Tensor Diagnostics (Stage 4)
+
+- Temporal coverage: **2019‑01‑01 → 2024‑12‑31 18:00**
+- Variables stitched: **12** (t2m, d2m, u10, v10, msl, sp, tcc, blh, cape, cin, tco3, tcwv)
+- Grid resolution: **9 × 17 (0.25° lat/lon)**
+- NaNs: **0** (post‑QC)
+- Infs: **0**
+- Min/Max sanity: **validated via Stage‑3 QC**
+- Coordinate consistency: **validated (monotonic time/lat/lon)**
+- Tensor completeness: **9128 timestamps × 12 variables × 9 × 17 grid**
+
+### Artifact Footprint
+
+- Stage 1 raw: **0.43 GB**
+- Stage 2 parquet: **5.0 GB**
+- Stage 3 chunked: **128 MB**
+- Stage 4 tensor: **128 MB**
+
+### Determinism
+
+- Reproducibility: 100%
+- Artifact digests: SHA256 validated
+
+### Boundary Hashing (C++ Module)
+
+Artifact digests are computed using a deterministic C++ SHA‑256 module
+(`src/cpp/deterministic_sha256.cpp`) exposed to Python via pybind11.
+This ensures reproducible, verifiable digests across all pipeline stages.
+
+## Performance Summary (v2.0.0)
+
+| Metric | Value | Notes |
+| -------- | -------- | ------- |
+| GRIB → Parquet conversion | 0.39 sec/file | Deterministic, restart‑safe |
+| Metadata extraction | 0.00095 sec/entry | 618,864 entries processed |
+| GRIB inspection throughput | 292 files/sec | Parallel CF‑GRIB inspection |
+| Chunk merge time | 0.45 sec/chunk (median) | 6‑worker parallelism |
+| Worker parallelism | 6 workers | Config‑driven orchestrator |
+| NaN footprint (pre‑QC) | 55,080 instantaneous; 1.38M flux | All removed post‑QC |
+| Post‑QC NaNs | 0 | Deterministic merge guarantee |
+| Tensor build time | 7 sec/tensor (median) | Dense IR₃ construction |
+| Tensor shape | (9128, 9, 17, 12) | Multi‑year, multi‑variable |
+| Stage 1 raw footprint | 0.43 GB | GRIB files (2019–2024) |
+| Stage 2 parquet footprint | 5.0 GB | Hourly + variable‑split parquet |
+| Stage 3 chunked footprint | 128 MB | Merged IR₂ artifact |
+| Stage 4 tensor footprint | 128 MB | Final IR₃ tensor |
+| Reproducibility | 100% | SHA256‑validated artifacts |
 
 ---
 

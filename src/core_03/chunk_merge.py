@@ -19,11 +19,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import xarray as xr
+# Deterministic artifact hashing (C++ boundary module)
+from boundary_hash import sha256_file
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # LOAD CHUNK OUTPUTS
-# ------------------------------------------------------------------------------
-
+# ==============================================================================
 
 def load_chunk_outputs(
     chunk_specs: list[Any], config: dict[str, Any]
@@ -70,10 +71,9 @@ def load_chunk_outputs(
     return grouped
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # MERGE DATASETS
-# ------------------------------------------------------------------------------
-
+# ==============================================================================
 
 def merge_datasets(grouped: dict[str, list[xr.Dataset]]) -> xr.Dataset:
     """
@@ -106,10 +106,9 @@ def merge_datasets(grouped: dict[str, list[xr.Dataset]]) -> xr.Dataset:
     return ds_merged
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # METADATA + QC
-# ------------------------------------------------------------------------------
-
+# ==============================================================================
 
 def build_merged_metadata(ds: xr.Dataset) -> dict[str, Any]:
     return {
@@ -132,10 +131,9 @@ def build_merged_qc(ds: xr.Dataset) -> dict[str, Any]:
     return qc
 
 
-# ------------------------------------------------------------------------------
-# WRITE OUTPUTS
-# ------------------------------------------------------------------------------
-
+# ==============================================================================
+# WRITE OUTPUTS + HASHING
+# ==============================================================================
 
 def write_outputs(
     ds: xr.Dataset,
@@ -149,19 +147,32 @@ def write_outputs(
 
     merged_nc.parent.mkdir(parents=True, exist_ok=True)
 
+    # Write NetCDF
     ds.to_netcdf(merged_nc)
+    digest_nc = sha256_file(str(merged_nc))
 
+    # Write metadata.json
     with open(merged_meta, "w") as f:
         json.dump(metadata, f, indent=2)
+    digest_meta = sha256_file(str(merged_meta))
 
+    # Write qc.json
     with open(merged_qc, "w") as f:
         json.dump(qc, f, indent=2)
+    digest_qc = sha256_file(str(merged_qc))
+
+    # Provenance logging
+    print(
+        f"[stage3] SHA256 digests:\n"
+        f"  merged.nc      → {digest_nc}\n"
+        f"  metadata.json  → {digest_meta}\n"
+        f"  qc.json        → {digest_qc}"
+    )
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # HIGH-LEVEL MERGE ENTRYPOINT
-# ------------------------------------------------------------------------------
-
+# ==============================================================================
 
 def merge_chunks(chunk_specs: list[Any], config: dict[str, Any]) -> xr.Dataset:
     grouped = load_chunk_outputs(chunk_specs, config)

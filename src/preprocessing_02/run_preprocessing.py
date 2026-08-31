@@ -84,12 +84,14 @@ import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
-from src.preprocessing_02.convert_grib_to_parquet import convert_grib_to_parquet
+# Deterministic artifact hashing (C++ boundary module)
+from boundary_hash import sha256_file
+
+from src.preprocessing_02.convert_grib_to_parquet import \
+    convert_grib_to_parquet
 from src.preprocessing_02.inspect_grib import inspect_all_gribs
-from src.preprocessing_02.metadata_parquet import (
-    build_parquet_metadata,
-    write_parquet_metadata_json,
-)
+from src.preprocessing_02.metadata_parquet import (build_parquet_metadata,
+                                                   write_parquet_metadata_json)
 from src.preprocessing_02.unzip_grib import unzip_all_months
 from src.utils.logging import get_logger
 from src.utils.paths import Paths
@@ -97,10 +99,9 @@ from src.utils.paths import Paths
 logger = get_logger(__name__)
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Logging setup
-# ------------------------------------------------------------------------------
-
+# ==============================================================================
 
 def setup_logging():
     paths = Paths()
@@ -119,10 +120,9 @@ def setup_logging():
     root_logger.setLevel(logging.INFO)
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Stage 2 success checker (per-GRIB conversion)
-# ------------------------------------------------------------------------------
-
+# ==============================================================================
 
 def stage2_success(meta: dict) -> bool:
     if not isinstance(meta, dict):
@@ -164,10 +164,9 @@ def stage2_success(meta: dict) -> bool:
     return True
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Step 1: Unzip monthly ZIP files
-# ------------------------------------------------------------------------------
-
+# ==============================================================================
 
 def step_unzip() -> list[Path]:
     logger.info("[stage2] Step 1: Unzipping monthly ZIP files")
@@ -176,10 +175,9 @@ def step_unzip() -> list[Path]:
     return extracted
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Step 2: Inspect GRIB files (diagnostic-only → grib_metadata.json)
-# ------------------------------------------------------------------------------
-
+# ==============================================================================
 
 def step_inspect() -> Path:
     logger.info("[stage2] Step 2: Inspecting GRIB files")
@@ -197,14 +195,17 @@ def step_inspect() -> Path:
     with open(grib_metadata_path, "w") as f:
         json.dump(grib_metadata, f, indent=2)
 
+    # Deterministic digest for diagnostic metadata
+    digest = sha256_file(str(grib_metadata_path))
+    logger.info(f"[stage2] SHA256 digest (grib_metadata.json): {digest}")
+
     logger.info(f"[stage2] Wrote GRIB diagnostic metadata → {grib_metadata_path}")
     return grib_metadata_path
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Delete stale eccodes index files
-# ------------------------------------------------------------------------------
-
+# ==============================================================================
 
 def cleanup_idx_files():
     paths = Paths()
@@ -217,10 +218,9 @@ def cleanup_idx_files():
             logger.warning(f"[stage2] Could not delete {idx}: {e}")
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Step 3: Convert GRIB → Parquet (parallel)
-# ------------------------------------------------------------------------------
-
+# ==============================================================================
 
 def step_convert_parallel() -> list[dict]:
     logger.info("[stage2] Step 3: Converting GRIB → Parquet (parallel)")
@@ -271,6 +271,15 @@ def step_convert_parallel() -> list[dict]:
                         f"(flux={meta.get('is_flux', False)}, "
                         f"static={meta.get('is_static', False)})"
                     )
+
+                    # Deterministic hashing for each Parquet artifact
+                    for var, parquet_map in meta["variables"].items():
+                        for ts, parquet_path in parquet_map.items():
+                            digest = sha256_file(str(parquet_path))
+                            logger.info(
+                                f"[stage2] SHA256 digest for {Path(parquet_path).name}: {digest}"
+                            )
+
                 else:
                     logger.error(f"[stage2] INVALID METADATA → {grib_path.name}")
 
@@ -290,10 +299,9 @@ def step_convert_parallel() -> list[dict]:
     return results
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Step 4: Build Parquet-only HOURLY metadata.json
-# ------------------------------------------------------------------------------
-
+# ==============================================================================
 
 def step_build_parquet_metadata() -> Path:
     logger.info("[stage2] Step 4: Building Parquet-only metadata.json")
@@ -304,6 +312,10 @@ def step_build_parquet_metadata() -> Path:
     paths = Paths()
     metadata_path = Path(paths.metadata_dir) / "metadata.json"
 
+    # Deterministic digest for final metadata.json
+    digest = sha256_file(str(metadata_path))
+    logger.info(f"[stage2] SHA256 digest (metadata.json): {digest}")
+
     logger.info(
         f"[stage2] Wrote Parquet-only metadata → {metadata_path} "
         f"({len(metadata)} timestamps)"
@@ -311,10 +323,9 @@ def step_build_parquet_metadata() -> Path:
     return metadata_path
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Main pipeline
-# ------------------------------------------------------------------------------
-
+# ==============================================================================
 
 def run_preprocessing():
     setup_logging()

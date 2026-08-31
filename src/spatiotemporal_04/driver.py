@@ -27,19 +27,12 @@ import pickle
 import xarray as xr
 import yaml
 
-from src.spatiotemporal_04 import (
-    grid,
-    mask,
-    metadata,
-    qc,
-    temporal_align,
-    temporal_interpolate,
-    tensor_builder,
-)
+from src.spatiotemporal_04 import (grid, mask, metadata, qc, temporal_align,
+                                   temporal_interpolate, tensor_builder)
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # CONFIG LOADER
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def load_config(path: str) -> dict:
@@ -47,9 +40,9 @@ def load_config(path: str) -> dict:
         return yaml.safe_load(f)
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # STAGE 4 EXECUTION
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def run_stage4(

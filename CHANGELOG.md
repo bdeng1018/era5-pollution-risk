@@ -10,7 +10,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) an
 ### Overview
 
 The Unreleased section tracks ongoing development for Branch 2, which extends the pipeline beyond ingestion and tensor compilation into feature engineering, modeling, evaluation, and deployment.
-Stages 01–04 are now frozen in v2.0.0; the remaining part of Branch 2 focuses on Stages 05–08.
+Stages 01–04 are now frozen in v2.1.0; the remaining part of Branch 2 focuses on Stages 05–08.
 
 ### Planned — Multi‑Stage ERA5 Pipeline (Deterministic, No AI)
 
@@ -58,6 +58,56 @@ Stages 01–04 are now frozen in v2.0.0; the remaining part of Branch 2 focu
 - Pipeline execution remains `.venv`‑based and deterministic.
 - No AI/RAG/LLM/agentic inference is planned for Branch 3.
 - Stages 05–08 are planned but not yet implemented.
+
+### Added
+
+- Planned integration of deterministic hashing and provenance manifesting into Stages 05–08.
+
+---
+
+## [2.1.0] — Branch 2 Deterministic Boundary Upgrade (Stages 01–04)
+
+### Overview
+
+v2.1.0 introduces full deterministic hashing across Stages 01–04 using a
+C++ boundary module (`boundary_hash`). This release strengthens scientific
+reproducibility guarantees by ensuring all pipeline artifacts—GRIB, Parquet,
+merged NetCDF, and Stage 4 tensors—produce stable SHA‑256 digests across
+machines, operating systems, and Python environments.
+
+This is a minor version bump because it adds a new reproducibility capability
+without changing public APIs or pipeline semantics.
+
+### Added
+
+- Deterministic C++ hashing boundary (`sha256_file`) for artifact‑level digests
+- Stage 01: SHA‑256 digests for all downloaded GRIB files
+- Stage 02: SHA‑256 digests for Parquet outputs, diagnostic metadata, and
+  hourly metadata.json
+- Stage 03: SHA‑256 digests for merged.nc, merged metadata.json, and qc.json
+- Stage 04: SHA‑256 digests for tensor_stage4.nc, tensor_metadata.json, and
+  tensor_qc.json
+- Unified deterministic provenance across ingestion → preprocessing →
+  chunking → tensor compilation
+
+### Changed
+
+- Stage 02, Stage 03, and Stage 04 updated to include post‑write hashing
+  boundaries
+- Logging upgraded to include digest provenance for all artifacts
+- Pipeline execution now guarantees bit‑level reproducibility for all
+  Stage 01–04 outputs
+
+### Fixed
+
+- Eliminated nondeterministic Python hashing behavior
+- Removed environment‑dependent digest variability across macOS/Linux/ARM64
+- Stabilized artifact lineage for downstream modeling stages
+
+### Notes
+
+- v2.1.0 is a reproducibility upgrade to the v2.0.0 artifact‑frozen release.
+- Stages 05–08 remain under `[Unreleased]` and will be introduced in Branch 3.
 
 ---
 
@@ -219,3 +269,9 @@ This release finalizes multi‑variable ingestion, deterministic preprocessing, 
 
 - Branch 1 is fully deterministic and intentionally minimal.
 - Branch 2 introduces multi‑variable ingestion and expanded modeling.
+
+[Unreleased]: https://github.com/bdeng1018/era5-pollution-risk/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/bdeng1018/era5-pollution-risk/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/bdeng1018/era5-pollution-risk/compare/v1.0.0...v2.0.0
+[1.0.0]: https://github.com/bdeng1018/era5-pollution-risk/compare/v0.1.0...v1.0.0
+[0.1.0]: https://github.com/bdeng1018/era5-pollution-risk/tree/v0.1.0

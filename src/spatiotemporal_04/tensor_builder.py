@@ -15,16 +15,19 @@ Responsibilities
 - Do NOT modify spatial or temporal structure
 """
 
+import json
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import xarray as xr
+# Deterministic artifact hashing (C++ boundary module)
+from boundary_hash import sha256_file
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Tensor construction
-# ------------------------------------------------------------------------------
-
+# ==============================================================================
 
 def build_tensor_dataset(
     ds_interpolated: xr.Dataset,
@@ -42,10 +45,8 @@ def build_tensor_dataset(
     time = np.asarray(temporal_contract["aligned_time"])
     mask = np.asarray(mask_contract["mask"])
 
-    assert mask.shape == (
-        lat.size,
-        lon.size,
-    ), "[Stage 4][tensor_builder] mask shape mismatch"
+    assert mask.shape == (lat.size, lon.size), \
+        "[Stage 4][tensor_builder] mask shape mismatch"
 
     ds = xr.Dataset(coords={"time": time, "lat": lat, "lon": lon})
 
@@ -56,28 +57,22 @@ def build_tensor_dataset(
         # Normalization rules
         # -------------------------
 
-        # Temperature: Celsius → Kelvin
-        if field == "t2m":
+        if field == "t2m":      # Celsius → Kelvin
             arr = arr + 273.15
 
-        # Dewpoint: Celsius → Kelvin (ERA5 d2m is Kelvin already, but safe)
-        if field == "d2m":
-            arr = arr  # no change needed
+        if field == "d2m":      # ERA5 d2m is already Kelvin
+            arr = arr
 
-        # Cloud cover: 0–100 → 0–1
-        if field == "tcc":
+        if field == "tcc":      # 0–100 → 0–1
             arr = arr / 100.0
-            arr[arr < 0] = 0.0  # fix tiny negative floats
+            arr[arr < 0] = 0.0
 
-        # Pressure: Pa → hPa
-        if field in ("msl", "sp"):
+        if field in ("msl", "sp"):  # Pa → hPa
             arr = arr / 100.0
 
-        # Boundary layer height: clip extreme spikes
-        if field == "blh":
+        if field == "blh":      # Clip extreme spikes
             arr = np.clip(arr, 0, 5000)
 
-        # CAPE/CIN: clip extreme spikes
         if field == "cape":
             arr = np.clip(arr, 0, 6000)
 
@@ -97,10 +92,71 @@ def build_tensor_dataset(
     return ds
 
 
-# ------------------------------------------------------------------------------
-# Entry point
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# Metadata + QC
+# ==============================================================================
 
+def build_tensor_metadata(ds: xr.Dataset) -> dict[str, Any]:
+    return {
+        "n_time": ds.sizes["time"],
+        "n_lat": ds.sizes["lat"],
+        "n_lon": ds.sizes["lon"],
+        "variables": list(ds.data_vars.keys()),
+        "coords": list(ds.coords.keys()),
+    }
+
+
+def build_tensor_qc(ds: xr.Dataset) -> dict[str, Any]:
+    qc = {}
+    for var in ds.data_vars:
+        qc[var] = {
+            "nan_count": int(ds[var].isnull().sum().values),
+            "min": float(ds[var].min().values),
+            "max": float(ds[var].max().values),
+        }
+    return qc
+
+
+# ==============================================================================
+# Write outputs + deterministic hashing
+# ==============================================================================
+
+def write_tensor_outputs(
+    ds: xr.Dataset,
+    metadata: dict[str, Any],
+    qc: dict[str, Any],
+    output_dir: Path,
+) -> None:
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    tensor_nc = output_dir / "tensor_stage4.nc"
+    tensor_meta = output_dir / "tensor_metadata.json"
+    tensor_qc = output_dir / "tensor_qc.json"
+
+    # Write NetCDF
+    ds.to_netcdf(tensor_nc)
+    digest_nc = sha256_file(str(tensor_nc))
+
+    # Write metadata.json
+    tensor_meta.write_text(json.dumps(metadata, indent=2))
+    digest_meta = sha256_file(str(tensor_meta))
+
+    # Write qc.json
+    tensor_qc.write_text(json.dumps(qc, indent=2))
+    digest_qc = sha256_file(str(tensor_qc))
+
+    print(
+        f"[Stage 4] SHA256 digests:\n"
+        f"  tensor_stage4.nc   → {digest_nc}\n"
+        f"  tensor_metadata.json → {digest_meta}\n"
+        f"  tensor_qc.json       → {digest_qc}"
+    )
+
+
+# ==============================================================================
+# Entry point
+# ==============================================================================
 
 def process_spatiotemporal_merge(
     ds_interpolated: xr.Dataset,
@@ -108,6 +164,7 @@ def process_spatiotemporal_merge(
     mask_contract: Mapping[str, Any],
     temporal_contract: Mapping[str, Any],
     fields: list[str],
+    output_dir: Path,
 ) -> xr.Dataset:
     """
     Stage 4 tensor builder invariant entry point.
@@ -122,4 +179,10 @@ def process_spatiotemporal_merge(
     )
 
     print("[Stage 4][tensor_builder] tensor shape:", ds.to_array().shape)
+
+    metadata = build_tensor_metadata(ds)
+    qc = build_tensor_qc(ds)
+
+    write_tensor_outputs(ds, metadata, qc, output_dir)
+
     return ds

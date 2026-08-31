@@ -26,7 +26,7 @@ Those components are reserved for Branch 3.
 
 Please report all security, data‑integrity, or reproducibility issues privately.
 
-Maintainer: **Brian Deng**
+Maintainer: **Brian Deng** <br>
 Email: **<bdeng.data.pipelines@gmail.com>**
 
 You may report:

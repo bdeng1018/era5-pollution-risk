@@ -54,10 +54,10 @@ This layout is consumed by:
 from dataclasses import dataclass
 from pathlib import Path
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Stage 1 Paths (Branch 2)
 # Provides deterministic directory defaults and supports monkeypatch overrides.
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 @dataclass

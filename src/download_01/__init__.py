@@ -53,7 +53,7 @@ Modules
 - download_era5_single.py    — Single‑variable ingestion with retries and metadata.
 """
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Stage 1: Branch 2 ERA5 Downloader Package
 # Provides GRIB-only ingestion for all configured variables/years/months.
-# ------------------------------------------------------------------------------
+# ==============================================================================

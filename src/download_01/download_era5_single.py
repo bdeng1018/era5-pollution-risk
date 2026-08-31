@@ -52,20 +52,15 @@ from pathlib import Path
 import cdsapi  # required for monkeypatching
 
 from src.download_01.paths import Paths
-from src.utils.config import (
-    load_config_yaml,
-    load_months,
-    load_region,
-    load_variables,
-    load_years,
-)
+from src.utils.config import (load_config_yaml, load_months, load_region,
+                              load_variables, load_years)
 from src.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Mapping of long descriptive variable names → short ERA5 codes
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 SHORTNAME_MAP = {
     "10m_u_component_of_wind": "u10",
@@ -92,17 +87,17 @@ SHORTNAME_MAP = {
 }
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Module‑level CDSAPI client
 # Required for Stage 1 monkeypatching in tests.
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 client = cdsapi.Client(timeout=300)
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Directory helpers
 # Ensure raw/era5/<year>/<month>/<variable>/ exists before download.
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def ensure_month_variable_dir(
@@ -128,10 +123,10 @@ def validate_directories(paths: Paths) -> None:
         Path(d).mkdir(parents=True, exist_ok=True)
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Environment validation
 # Ensures CDSAPI_URL and CDSAPI_KEY are present.
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def validate_environment(paths: Paths) -> None:
@@ -141,10 +136,10 @@ def validate_environment(paths: Paths) -> None:
         raise OSError("Missing CDS credentials")
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Config validation (Branch 2 YAML)
 # Ensures years, months, and variables are present in config.yml.
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def validate_config(paths: Paths) -> bool:
@@ -168,10 +163,10 @@ def validate_config(paths: Paths) -> bool:
         return False
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Retry wrapper for CDSAPI downloads
 # Retries up to 3 times with exponential backoff.
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def download_with_retry(request: dict, outfile: Path) -> Path | None:
@@ -192,11 +187,11 @@ def download_with_retry(request: dict, outfile: Path) -> Path | None:
     return None
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Single‑variable GRIB download
 # Downloads one variable for one year‑month pair.
 # Writes metadata JSON regardless of success.
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def download_variable(variable: str, year: str, month: str) -> Path | None:
@@ -276,10 +271,10 @@ def download_variable(variable: str, year: str, month: str) -> Path | None:
     return short_file if result is not None else None
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # CLI entrypoint
 # Iterates over variables × years × months from config.yml.
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def main():
