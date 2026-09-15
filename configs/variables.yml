@@ -1,11 +1,12 @@
 # ==============================================================================
-# ERA5 variables to download for Branch 1.
+# ERA5 Variables — Branch 2 (IR0 → IR4)
+#
 # This is the complete 21‑variable meteorological feature set used for:
 #   - pollution‑risk modeling
 #   - PM2.5 / ozone dispersion analysis
 #   - meteorological feature engineering
 #
-# Format: minimal top‑level list (preferred style)
+# Format: minimal top‑level list (canonical ingestion set)
 # ==============================================================================
 
 - "10m_u_component_of_wind"

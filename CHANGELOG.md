@@ -5,37 +5,27 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) an
 
 ---
 
-## [Unreleased] — Branch 2 (Stages 05–08)
+## [Unreleased] — Branch 2 (Stages 06–08)
 
 ### Overview
 
-The Unreleased section tracks ongoing development for Branch 2, which extends the pipeline beyond ingestion and tensor compilation into feature engineering, modeling, evaluation, and deployment.
-Stages 01–04 are now frozen in v2.1.0; the remaining part of Branch 2 focuses on Stages 05–08.
+Branch 2 development now focuses on Stages 06–08. Stages 01–05 are complete and stable, including IR₅ feature tensors. Remaining work covers modeling, evaluation, and deployment.
 
 ### Planned — Multi‑Stage ERA5 Pipeline (Deterministic, No AI)
 
-#### Stage 05 — Feature Engineering
-
-- Multi‑variable feature registry (meteorology + pollution‑risk indicators)
-- Spatial aggregations (grid‑cell neighborhoods, lat/lon windows)
-- Temporal aggregations (rolling windows, lags, diurnal cycles)
-- Derived meteorological indicators (humidity, wind shear, stability indices)
-- Feature metadata (units, description, provenance)
-- Transformation graphs and dependency tracking
-
 #### Stage 06 — Modeling
 
-- Multiple model families (linear, tree‑based, ensemble)
+- Model families (linear, tree‑based, ensemble)
 - Config‑driven model selection
 - Train/validation/test splits
 - Deterministic training workflows
 - Versioned model artifacts
-- Model metadata + provenance
-- Hyperparameter search scaffolding (deterministic, no AI)
+- Model metadata and provenance
+- Deterministic hyperparameter search scaffolding
 
 #### Stage 07 — Evaluation
 
-- Full regression metrics (MAE, RMSE, R², MAPE)
+- Regression metrics (MAE, RMSE, R², MAPE)
 - Residual analysis
 - Diagnostic plots
 - Error distributions
@@ -54,14 +44,59 @@ Stages 01–04 are now frozen in v2.1.0; the remaining part of Branch 2 focu
 
 ### Notes
 
-- The remaining part of Branch 2 introduces feature engineering, modeling, evaluation, and deployment.
+- Branch 2 now has complete IR₀ → IR₅ coverage.
+- Remaining work focuses on IR₆ (datasets), IR₇ (evaluation), and IR₈ (deployment).
 - Pipeline execution remains `.venv`‑based and deterministic.
 - No AI/RAG/LLM/agentic inference is planned for Branch 3.
-- Stages 05–08 are planned but not yet implemented.
 
 ### Added
 
-- Planned integration of deterministic hashing and provenance manifesting into Stages 05–08.
+- Planned integration of deterministic hashing and provenance manifesting into Stages 06–08.
+
+---
+
+## [2.2.0] — Branch 2 Feature‑Engineering Completion (Stage 05)
+
+### Overview
+
+v2.2.0 finalizes **Stage 05** and introduces the first complete implementation of **IR₅ Feature Tensors**.
+This release marks the transition from a tensor‑only pipeline (IR₀→IR₄) to a full **feature‑engineering compiler** capable of producing deterministic, metadata‑rich, pollution‑risk feature tensors.
+
+This is a **minor version bump** because it adds a new IR boundary (IR₅), new artifacts, new metadata, and new deterministic contracts — without breaking existing APIs or altering Stages 01–04 semantics.
+
+### Added
+
+- IR₅ feature tensors (temporal, spatial, composite)
+- Deterministic feature registry and provenance metadata
+- IR₅ QC checks (NaN/Inf, bounds, shape consistency)
+- IR₅ metadata.json with units, descriptions, and dependency graph
+- IR₄ → IR₅ pipeline (temporal → spatial → composite → qc → metadata → writer)
+- SHA‑256 hashing for IR₅ artifacts
+- Makefile Stage 05 target and IR‑aligned comments
+- Updated IR boundary documentation (IR₀ → IR₈)
+- Updated environment.yml (added pytz for temporal alignment)
+
+### Changed
+
+- Expanded IR₄ contracts for feature‑ready temporal indices
+- Updated Stage 04 → Stage 05 interface for deterministic ingestion
+- Updated repository structure to include data/features/
+- Updated root README, CONTRIBUTING.md, and .gitignore for IR₅
+- Updated logging to include IR₅ provenance and digest outputs
+
+### Fixed
+
+- Stabilized temporal‑window alignment for rolling features
+- Removed nondeterministic ordering in feature registry expansion
+- Corrected IR₅ metadata provenance paths
+- Fixed Stage 04 QC log inconsistencies affecting IR₅ ingestion
+
+### Notes
+
+- IR₅ is now fully implemented and stable
+- IR₆ (datasets), IR₇ (evaluation), IR₈ (deployment) remain under [Unreleased]
+- Branch 2 continues to guarantee deterministic, restart‑safe execution
+- No AI/RAG/LLM components included in Branch 2
 
 ---
 
@@ -270,7 +305,8 @@ This release finalizes multi‑variable ingestion, deterministic preprocessing, 
 - Branch 1 is fully deterministic and intentionally minimal.
 - Branch 2 introduces multi‑variable ingestion and expanded modeling.
 
-[Unreleased]: https://github.com/bdeng1018/era5-pollution-risk/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/bdeng1018/era5-pollution-risk/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/bdeng1018/era5-pollution-risk/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/bdeng1018/era5-pollution-risk/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/bdeng1018/era5-pollution-risk/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/bdeng1018/era5-pollution-risk/compare/v0.1.0...v1.0.0

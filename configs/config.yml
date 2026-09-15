@@ -1,74 +1,54 @@
 # ==============================================================================
-# ERA5 Pollution‑Risk Pipeline — Branch 2 (Stages 1–4)
+# ERA5 Pollution‑Risk Pipeline — Branch 2 (IR₀ → IR₅)
 # ==============================================================================
-# This configuration drives the full pipeline:
-#
-#   Stage 1 — Raw GRIB ingestion
-#       • download ERA5 GRIB files
-#       • convert GRIB → hourly parquet
-#       • preserve all variables
-#
-#   Stage 2 — Variable‑split parquet + metadata.json
-#       • one parquet per (variable, timestamp)
-#       • metadata.json with flat keys: "<timestamp>::<variable>"
-#
-#   Stage 3 — Single‑variable chunk engine (Branch‑2)
-#       • one chunk per (variable, window_start)
-#       • schema: time, lat, lon, <variable>
-#       • dynamic schema injection per variable
-#       • merged.nc + metadata + QC
-#
-#   Stage 4 — Tensor construction + pollution‑risk dataset
-#       • consumes merged.nc
-#       • builds spatiotemporal tensors
-#       • writes Stage‑4 dataset + diagnostics
-#
+# Stages:
+#   Stage 1 — IR₀ Raw GRIB ingestion
+#   Stage 2 — IR₁ Hourly parquet + metadata.json
+#   Stage 3 — IR₂ Chunked tiles + IR₃ merged.nc
+#   Stage 4 — IR₄ Spatiotemporal tensor
+#   Stage 5 — IR₅ Feature tensors (completed)
 # ==============================================================================
 
 # ==============================================================================
 # Environment
 # ==============================================================================
+
 environment:
   require_cdsapi_credentials: true
   require_cfgrib: false
   require_eccodes: false
+  hashing: sha256
 
 # ==============================================================================
-# PATHS
+# PATHS (IR‑aligned)
 # ==============================================================================
 
 paths:
-  # Stage‑1 raw GRIB directory
-  raw_dir: data/raw/era5
+  raw_dir: data/raw/era5 # IR₀
+  intermediate_dir: data/intermediate # IR₁ + IR₃
+  metadata_dir: data/metadata # IR₁ metadata
 
-  # Stage‑1 → Stage‑2 intermediate parquet directory
-  intermediate_dir: data/intermediate
-
-  # Stage‑2 metadata.json directory
-  metadata_dir: data/metadata
-
-  # Stage‑3 chunk output directory
-  chunk_output_dir: data/chunks
-
-  # Stage‑3 chunk metadata directory
+  chunk_output_dir: data/chunks # IR₂
   stage3_output:
-    chunk_metadata_dir: data/chunks_metadata
+    chunk_metadata_dir: data/chunks_metadata # IR₂ metadata
 
-  # Stage‑3 merged outputs
   stage3_merged: data/intermediate/merged.nc
   stage3_metadata: data/intermediate/merged_metadata.json
   stage3_qc: data/intermediate/merged_qc.json
 
-  # Stage‑4 output directory
-  stage4_output_dir: data/spatiotemporal
-
-  # Stage-4 outputs
+  stage4_output_dir: data/spatiotemporal # IR₄
   stage4_dataset: data/spatiotemporal/stage4_tensor.nc
   stage4_qc: data/spatiotemporal/stage4_qc.pkl
   stage4_metadata: data/spatiotemporal/stage4_metadata.pkl
 
+  features_dir: data/features # IR₅
+  features_tensor: data/features/ir5_features.zarr
+  features_metadata: data/features/metadata.json
+  features_qc: data/features/ir5_qc.json
+  features_registry: data/features/registry.json
+
 # ==============================================================================
-# STAGE 1 — RAW INGESTION
+# STAGE 1 — IR₀ Raw GRIB Ingestion
 # ==============================================================================
 
 stage1:
@@ -108,7 +88,7 @@ stage1:
     write_hourly_parquet: true
 
 # ==============================================================================
-# STAGE 2 — VARIABLE‑SPLIT PARQUET + METADATA.JSON
+# STAGE 2 — IR₁ Hourly Parquet + metadata.json
 # ==============================================================================
 
 stage2:
@@ -123,7 +103,7 @@ stage2:
     include_shape: true
 
 # ==============================================================================
-# STAGE 3 — SINGLE‑VARIABLE CHUNK ENGINE
+# STAGE 3 — IR₂ Chunk Engine + IR₃ merged.nc
 # ==============================================================================
 
 stage3:
@@ -169,7 +149,7 @@ stage3:
     chunk_metadata_dir: data/chunks_metadata
 
 # ==============================================================================
-# SCHEMA — DYNAMIC SINGLE‑VARIABLE MODE
+# SCHEMA — IR₂ Single‑Variable Chunk Schema
 # ==============================================================================
 # IMPORTANT:
 #   Stage‑3 dynamically injects the variable column into schema.columns.
@@ -195,10 +175,10 @@ schema:
     lat: float64
     lon: float64
 
-  version: "2.0-single-variable"
+  version: "2.2-ir-boundary"
 
 # ==============================================================================
-# STAGE 4 — TENSOR CONSTRUCTION + POLLUTION‑RISK DATASET
+# STAGE 4 — IR₄ Spatiotemporal Tensor
 # ==============================================================================
 
 stage4:
@@ -239,10 +219,60 @@ stage4:
   # - lsm
 
 # ==============================================================================
-# STAGE 5/6 — Model Training / Prediction
+# STAGE 5 — IR₅ Feature Engineering (Completed)
 # ==============================================================================
-model:
+
+stage5:
+  enabled: true
+
+  input_tensor: data/spatiotemporal/stage4_tensor.nc
+  output_tensor: data/features/stage5_features.nc
+  metadata_path: data/features/stage5_metadata.json
+  qc_path: data/features/stage5_qc.json
+  registry_path: data/features/registry.json
+  hashing: sha256
+
+  temporal_features:
+    - t2m_roll_mean_6h
+    - t2m_roll_mean_24h
+    - t2m_delta_24h
+    - d2m_roll_mean_6h
+    - d2m_roll_mean_24h
+    - d2m_delta_24h
+    - u10_roll_mean_6h
+    - u10_roll_mean_24h
+    - u10_delta_24h
+    - v10_roll_mean_6h
+    - v10_roll_mean_24h
+    - v10_delta_24h
+    - msl_roll_mean_6h
+    - msl_roll_mean_24h
+    - msl_delta_24h
+
+  spatial_features:
+    - t2m_mean_3x3
+    - t2m_laplacian
+    - d2m_mean_3x3
+    - d2m_laplacian
+    - u10_mean_3x3
+    - u10_laplacian
+    - v10_mean_3x3
+    - v10_laplacian
+    - msl_mean_3x3
+    - msl_laplacian
+
+  composite_features:
+    - instability_index
+    - moisture_temp_index
+    - pressure_context_index
+    - wind_shear_index
+
+# ==============================================================================
+# STAGE 6 — Modeling (Planned)
+# ==============================================================================
+
+stage6:
+  enabled: false
   target: t2m
   artifact_dir: models
-  features_dir: data/features
   predictions_dir: data/predictions

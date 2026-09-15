@@ -3,17 +3,15 @@
 This document describes the high‑level architecture of the ERA5 Pollution Risk Pipeline.
 It explains how the system is structured, how each stage interacts, and how data flows from raw ERA5 ingestion to final deployment artifacts and API inference.
 
----
-
 ## 1. Architectural Goals
 
 The pipeline is designed to:
 
-- Download ERA5 + pollution datasets reliably
+- Download ERA5 datasets reliably
 - Apply deterministic preprocessing and harmonization
 - Build spatial and temporal chunk metadata
 - Compile canonical IR₄ spatiotemporal tensors
-- Generate reproducible IR₅ feature tensors
+- Generate reproducible IR₅ feature tensors (registry‑driven)
 - Assemble IR₆ model‑ready datasets
 - Produce IR₇ evaluation artifacts and predictions
 - Build IR₈ deployment artifacts for inference
@@ -22,41 +20,34 @@ The pipeline is designed to:
 
 The architecture emphasizes **clarity**, **traceability**, **reproducibility**, and **stage isolation**.
 
----
-
 ## 2. High‑Level Pipeline Flow
 
 ```text
-Raw ERA5 → Stage 02 → Intermediate → Stage 03 → Chunks → Stage 04 → IR₄ → Stage 05 → IR₅ → Stage 06 → IR₆ → Stage 07 → IR₇ → Stage 08 → IR₈ Deployment
+Raw ERA5 → Stage 02 → Intermediate → Stage 03 → Chunks → Stage 04 → IR₄
+         → Stage 05 → IR₅ → Stage 06 → IR₆ → Stage 07 → IR₇ → Stage 08 → IR₈ Deployment
 ```
 
 Each stage is independent, testable, diagnosable, and produces a well‑defined IR artifact.
-
----
 
 ## 3. Stage Architecture
 
 ### Stage 01 — ERA5 Download
 
 - Downloads ERA5 variables defined in `configs/era5.yml`.
-- Stores raw NetCDF/GRIB/parquet files.
+- Stores raw GRIB files.
 - Includes diagnostics verifying file availability and integrity.
 
-**Inputs:** ERA5 API
-**Outputs:** `data/raw/`
-
----
+**Inputs:** ERA5 API  <br>
+**Outputs:** `data/raw/` (IR₀)
 
 ### Stage 02 — Preprocessing
 
-- Cleans, harmonizes, and normalizes raw ERA5 + pollution data.
-- Applies deterministic preprocessing rules.
+- Converts GRIB → hourly parquet.
+- Normalizes coordinates and harmonizes metadata.
 - Produces canonical intermediate artifacts.
 
-**Inputs:** `data/raw/`
-**Outputs:** `data/intermediate/`
-
----
+**Inputs:** `data/raw/`  <br>
+**Outputs:** `data/intermediate/` (IR₁)
 
 ### Stage 03 — Chunk Engine
 
@@ -64,13 +55,12 @@ Each stage is independent, testable, diagnosable, and produces a well‑defined 
 - Generates chunked datasets for efficient compilation.
 - Includes diagnostics validating chunk completeness and boundaries.
 
-**Inputs:** Intermediate artifacts
+**Inputs:** IR₁ intermediate artifacts  <br>
 **Outputs:**
 
-- `data/chunks/`
+- `data/chunks/` (IR₂)
 - `data/chunks_metadata/`
-
----
+- `data/intermediate/merged.nc` (IR₃)
 
 ### Stage 04 — Spatiotemporal Compiler
 
@@ -78,21 +68,24 @@ Each stage is independent, testable, diagnosable, and produces a well‑defined 
 - Applies grid logic, masks, and chunk stitching.
 - Includes diagnostics verifying tensor shape, completeness, and metadata.
 
-**Inputs:** Chunk engine outputs
+**Inputs:** IR₂ + IR₃  <br>
 **Outputs:** `data/spatiotemporal/` (IR₄)
 
----
+### Stage 05 — Feature Engineering (Registry‑Driven)
 
-### Stage 05 — Feature Engineering
+- Generates IR₅ feature tensors using deterministic temporal, spatial, and composite transforms.
+- Applies rolling windows, deltas, 3×3 means, Laplacians, and composite indices.
+- Uses a registry‑driven architecture (`registry.yml`) for reproducibility.
+- Produces IR₅ metadata, QC, and registry artifacts.
+- Includes diagnostics validating feature completeness, missing values, infinite values, and schema.
 
-- Generates IR₅ feature tensors.
-- Applies derived features, composites, aggregations.
-- Includes diagnostics validating feature completeness and schema.
-
-**Inputs:** IR₄ tensors
+**Inputs:** IR₄ tensors  <br>
 **Outputs:** `data/features/` (IR₅)
 
----
+- `stage5_features.nc`
+- `stage5_metadata.json`
+- `stage5_qc.json`
+- `registry.json`
 
 ### Stage 06 — Modeling
 
@@ -100,10 +93,8 @@ Each stage is independent, testable, diagnosable, and produces a well‑defined 
 - Applies normalization, train/val/test splits.
 - Includes diagnostics verifying dataset integrity.
 
-**Inputs:** IR₅ features
+**Inputs:** IR₅ features  <br>
 **Outputs:** `data/model_ready/` (IR₆)
-
----
 
 ### Stage 07 — Evaluation
 
@@ -111,13 +102,11 @@ Each stage is independent, testable, diagnosable, and produces a well‑defined 
 - Generates predictions and evaluation reports.
 - Includes diagnostics validating metrics and prediction outputs.
 
-**Inputs:** IR₆ datasets + trained model
+**Inputs:** IR₆ datasets + trained model  <br>
 **Outputs:**
 
 - `data/evaluation/` (IR₇)
 - `data/predictions/` (IR₇)
-
----
 
 ### Stage 08 — Deployment
 
@@ -125,10 +114,8 @@ Each stage is independent, testable, diagnosable, and produces a well‑defined 
 - Packages model, normalization, metadata, and inference config.
 - Includes diagnostics verifying deployment readiness.
 
-**Inputs:** IR₇ evaluation + trained model
+**Inputs:** IR₇ evaluation + trained model  <br>
 **Outputs:** `data/deployment/` (IR₈)
-
----
 
 ## 4. Directory Structure
 
@@ -180,8 +167,6 @@ This structure enforces strict separation of:
 - **Tooling** (`.vscode/`)
 - **Build orchestration** (`Makefile`)
 
----
-
 ## 5. Configuration Architecture
 
 All pipeline configuration lives in:
@@ -198,8 +183,6 @@ Key responsibilities:
 - Support full pipeline orchestration
 
 Configuration is intentionally minimal and declarative.
-
----
 
 ## 6. Diagnostics Architecture
 
@@ -223,10 +206,6 @@ Diagnostics are runnable independently or via:
 make diagnostics
 ```
 
-This ensures the pipeline is always in a valid state.
-
----
-
 ## 7. Makefile Architecture
 
 The Makefile provides:
@@ -240,8 +219,6 @@ The Makefile provides:
 - Environment setup (`make env`)
 
 It is the primary developer interface for running the pipeline.
-
----
 
 ## 8. Logging Architecture
 
@@ -259,8 +236,6 @@ Logs capture:
 - diagnostic results
 
 Logging remains stage‑scoped to preserve clarity and traceability.
-
----
 
 ## 9. Testing Architecture
 
@@ -286,8 +261,6 @@ Run via:
 make test
 ```
 
----
-
 ## 10. Extensibility
 
 The architecture supports:
@@ -301,10 +274,8 @@ The architecture supports:
 
 Each stage is isolated, making extension straightforward.
 
----
-
 ## 11. Contact
 
-Maintainer: Brian Deng <br>
-Email: <bdeng.data.pipelines@gmail.com> <br>
+Maintainer: Brian Deng  <br>
+Email: <bdeng.data.pipelines@gmail.com>  <br>
 GitHub: <https://github.com/bdeng1018>

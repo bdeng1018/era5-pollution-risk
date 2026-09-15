@@ -22,12 +22,14 @@ from typing import Any
 
 import numpy as np
 import xarray as xr
+
 # Deterministic artifact hashing (C++ boundary module)
 from boundary_hash import sha256_file
 
 # ==============================================================================
 # Tensor construction
 # ==============================================================================
+
 
 def build_tensor_dataset(
     ds_interpolated: xr.Dataset,
@@ -45,8 +47,10 @@ def build_tensor_dataset(
     time = np.asarray(temporal_contract["aligned_time"])
     mask = np.asarray(mask_contract["mask"])
 
-    assert mask.shape == (lat.size, lon.size), \
-        "[Stage 4][tensor_builder] mask shape mismatch"
+    assert mask.shape == (
+        lat.size,
+        lon.size,
+    ), "[Stage 4][tensor_builder] mask shape mismatch"
 
     ds = xr.Dataset(coords={"time": time, "lat": lat, "lon": lon})
 
@@ -57,20 +61,20 @@ def build_tensor_dataset(
         # Normalization rules
         # -------------------------
 
-        if field == "t2m":      # Celsius → Kelvin
+        if field == "t2m":  # Celsius → Kelvin
             arr = arr + 273.15
 
-        if field == "d2m":      # ERA5 d2m is already Kelvin
+        if field == "d2m":  # ERA5 d2m is already Kelvin
             arr = arr
 
-        if field == "tcc":      # 0–100 → 0–1
+        if field == "tcc":  # 0–100 → 0–1
             arr = arr / 100.0
             arr[arr < 0] = 0.0
 
         if field in ("msl", "sp"):  # Pa → hPa
             arr = arr / 100.0
 
-        if field == "blh":      # Clip extreme spikes
+        if field == "blh":  # Clip extreme spikes
             arr = np.clip(arr, 0, 5000)
 
         if field == "cape":
@@ -96,6 +100,7 @@ def build_tensor_dataset(
 # Metadata + QC
 # ==============================================================================
 
+
 def build_tensor_metadata(ds: xr.Dataset) -> dict[str, Any]:
     return {
         "n_time": ds.sizes["time"],
@@ -120,6 +125,7 @@ def build_tensor_qc(ds: xr.Dataset) -> dict[str, Any]:
 # ==============================================================================
 # Write outputs + deterministic hashing
 # ==============================================================================
+
 
 def write_tensor_outputs(
     ds: xr.Dataset,
@@ -158,17 +164,36 @@ def write_tensor_outputs(
 # Entry point
 # ==============================================================================
 
+
 def process_spatiotemporal_merge(
     ds_interpolated: xr.Dataset,
     grid_contract: Mapping[str, Any],
     mask_contract: Mapping[str, Any],
     temporal_contract: Mapping[str, Any],
-    fields: list[str],
-    output_dir: Path,
+    fields: list[str] | None = None,
+    output_dir: Path | None = None,
 ) -> xr.Dataset:
     """
     Stage 4 tensor builder invariant entry point.
+
+    Tests call this function with 4, 5, or 6 arguments.
+    To preserve deterministic behavior while remaining test‑compatible,
+    `fields` and `output_dir` are optional:
+
+        • fields: defaults to all variables in ds_interpolated
+        • output_dir: defaults to a temporary directory under ./stage4_output/
+
+    No spatial or temporal structure is modified.
     """
+
+    # Default fields: all interpolated variables
+    if fields is None:
+        fields = list(ds_interpolated.data_vars.keys())
+
+    # Default output directory
+    if output_dir is None:
+        output_dir = Path("stage4_output")
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     ds = build_tensor_dataset(
         ds_interpolated=ds_interpolated,

@@ -57,11 +57,6 @@ def test_tensor_builder_basic():
     # --------------------------------------------------------------------------
     # Synthetic interpolation contract (not used directly by tensor builder)
     # --------------------------------------------------------------------------
-    interp_contract = {
-        "method": "linear",
-        "added_timestamps": [],
-        "interpolated_fraction": 0.0,
-    }
 
     # --------------------------------------------------------------------------
     # Synthetic aligned + interpolated dataset

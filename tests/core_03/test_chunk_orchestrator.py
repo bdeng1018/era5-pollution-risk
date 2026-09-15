@@ -36,7 +36,7 @@ def test_orchestrator_smoke(tmp_path):
     """
 
     # Schema is NOT used by orchestrator, but test keeps it for completeness
-    schema = ChunkSchema(
+    ChunkSchema(
         {
             "schema": {
                 "columns": ["time", "lat", "lon", "t2m"],

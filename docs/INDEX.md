@@ -3,8 +3,6 @@
 This index provides a structured entry point into all documentation for the ERA5 Pollution Risk Pipeline.
 Use this page to navigate architecture, onboarding, pipeline flow, schemas, and diagrams.
 
----
-
 ## 1. Core Documentation
 
 - **Architecture Overview**
@@ -27,8 +25,6 @@ Use this page to navigate architecture, onboarding, pipeline flow, schemas, and 
   `docs/SCHEMA_REFERENCE.md`
   Structural schemas for raw ERA5, chunk metadata, IR₄, IR₅, and placeholders for IR₆–IR₈.
 
----
-
 ## 2. Diagrams (Architecture Visuals)
 
 All diagrams live under:
@@ -50,8 +46,6 @@ Key diagrams include:
 - `makefile_target_flow.md`
 - Stage‑specific diagrams (`stage02_preprocessing.md`, `stage03_chunk_engine.md`, etc.)
 
----
-
 ## 3. Configuration Files
 
 All configs live under:
@@ -63,12 +57,13 @@ configs/
 These files define ERA5 variables, spatial regions, temporal ranges, pipeline paths, and stage‑specific parameters.
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | `config.yml` | Top‑level pipeline configuration and global settings |
 | `era5.yml` | ERA5 variable definitions, normalization rules, and download parameters |
 | `months.yml` | Month ranges used for ERA5 download and preprocessing |
 | `paths.yml` | Canonical directory structure for raw, intermediate, IR₄, IR₅, and diagnostics outputs |
 | `region.yml` | Spatial region definitions (lat/lon bounds, masks, grid selection) |
+| `stage5.yml` | Stage 05 feature engineering parameters |
 | `variables.yml` | Master list of ERA5 variables (21 GRIB fields) and feature engineering variable groups |
 | `years.yml` | Year ranges used for ERA5 download and temporal slicing |
 
@@ -79,14 +74,12 @@ They ensure reproducibility across:
 - Stage 02 (preprocessing)
 - Stage 03 (chunk engine)
 - Stage 04 (IR₄ compiler)
-- Stage 05 (IR₅ feature engineering)(future)
+- Stage 05 (IR₅ feature engineering)
 - Stage 06 (IR₆ modeling)(future)
 - Stage 07 (IR₇ evaluation)(future)
 - Stage 08 (IR₈ deployment)(future)
 
 Configuration is intentionally minimal, explicit, and fully separated from code.
-
----
 
 ## 4. Makefile Targets
 
@@ -98,14 +91,14 @@ make stage01
 make stage02
 make stage03
 make stage04
+make stage05
 make test
 make lint
+make format
 make reset
 ```
 
 See `ONBOARDING.md` for full details.
-
----
 
 ## 5. Tests
 
@@ -120,11 +113,9 @@ Tests cover:
 - Stage logic
 - Diagnostics
 - IR tensor correctness
-- Feature engineering (future)
+- Feature engineering
 - Modeling (future)
 - Deployment (future)
-
----
 
 ## 6. API Documentation (Future)
 
@@ -136,9 +127,7 @@ Once IR₈ stabilizes, add:
 - `/health` endpoint
 - Model versioning rules
 
----
-
-## 8. Contact
+## 7. Contact
 
 Maintainer: Brian Deng <br>
 Email: <bdeng.data.pipelines@gmail.com> <br>

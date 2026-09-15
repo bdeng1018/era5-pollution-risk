@@ -1,5 +1,5 @@
 # ==============================================================================
-# Branch 2 ERA5 Configuration
+# Branch 2 ERA5 Configuration (IR0 → IR5)
 # Defines dataset parameters and references to ingestion config files.
 # ==============================================================================
 
@@ -9,15 +9,23 @@ dataset:
   download_format: uncompressed
   grid: 0.25
   timestep: hourly
+  version: "2.2.0"
+  ir_boundary: "IR0-IR5"
 
 ingestion:
   variables: configs/variables.yml
   years: configs/years.yml
   months: configs/months.yml
   region: configs/region.yml
+  stage5_config: configs/stage5.yml
 
 paths:
   config: configs/paths.yml
+  features_dir: data/features
+  features_tensor: data/features/stage5_features.nc
+  features_metadata: data/features/stage5_metadata.json
+  features_qc: data/features/stage5_qc.json
+  features_registry: data/features/registry.json
 
 parallel:
   processes: 4
@@ -25,6 +33,7 @@ parallel:
 metadata:
   enabled: true
   format: json
+  hashing: sha256
 
 environment:
   require_cdsapi_credentials: true

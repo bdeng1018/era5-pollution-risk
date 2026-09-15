@@ -3,8 +3,6 @@
 Welcome to the ERA5 Pollution Risk Pipeline.
 This document provides everything you need to set up your environment, run the pipeline, inspect artifacts, debug issues, and contribute code.
 
----
-
 ## 1. Prerequisites
 
 Install the following:
@@ -20,8 +18,6 @@ Clone the repository:
 git clone https://github.com/bdeng1018/era5-pollution-risk
 cd era5-pollution-risk
 ```
-
----
 
 ## 2. VS Code Workspace Setup
 
@@ -51,8 +47,6 @@ These are auto-loaded:
 - Makefile Tools
 - GitLens
 
----
-
 ## 3. Environment Setup
 
 Create the environment:
@@ -72,8 +66,6 @@ Install local dependencies:
 ```bash
 pip install -e .
 ```
-
----
 
 ## 4. Running the Pipeline (Stages 01–08)
 
@@ -179,9 +171,7 @@ Builds IR₈ deployment artifacts:
 data/deployment/
 ```
 
----
-
-## 5. Diagnostics (All Stages)
+## 5. Diagnostics (All Stages - Planned)
 
 Run all diagnostics:
 
@@ -208,8 +198,6 @@ Diagnostics output to:
 data/logs/
 ```
 
----
-
 ## 6. Testing & Linting
 
 Run tests:
@@ -224,9 +212,13 @@ Run linting:
 make lint
 ```
 
-Tests should always be run **before** linting.
+Run formatting:
 
----
+```bash
+make format
+```
+
+Tests should always be run **before** linting and formatting.
 
 ## 7. Resetting Pipeline Artifacts
 
@@ -246,8 +238,6 @@ make reset
 
 Removes pipeline artifacts for Stages 01–08.
 Use with caution.
-
----
 
 ## 8. Folder Structure Overview
 
@@ -287,8 +277,6 @@ tests/
 docs/
 ```
 
----
-
 ## 9. Contributing Code
 
 ### Formatting
@@ -322,8 +310,6 @@ scripts/diagnostics/
 - Update diagnostics if needed
 - Update diagrams if architecture changes
 
----
-
 ## 10. Debugging Tips
 
 ### VS Code Launchers
@@ -351,10 +337,8 @@ Use:
 - Predictions missing → run Stage 07
 - Deployment artifacts missing → run Stage 08
 
----
-
 ## 11. Contact
 
-Maintainer: Brian Deng <br>
-Email: <bdeng.data.pipelines@gmail.com> <br>
+Maintainer: Brian Deng  <br>
+Email: <bdeng.data.pipelines@gmail.com>  <br>
 GitHub: <https://github.com/bdeng1018>

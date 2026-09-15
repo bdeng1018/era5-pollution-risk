@@ -1,0 +1,115 @@
+# ==============================================================================
+# Stage 05 — Feature Engineering Configuration (IR5)
+# Canonical registry-driven configuration matching actual Stage 5 implementation.
+# ==============================================================================
+
+temporal:
+  variables:
+    - t2m
+    - d2m
+    - u10
+    - v10
+    - msl
+
+  windows:
+    roll_mean:
+      - 6h
+      - 24h
+    deltas:
+      - 24h
+
+spatial:
+  variables:
+    - t2m
+    - d2m
+    - u10
+    - v10
+    - msl
+
+  kernels:
+    mean_3x3:
+      - [1, 1, 1]
+      - [1, 1, 1]
+      - [1, 1, 1]
+
+    laplacian:
+      - [0, -1, 0]
+      - [-1, 4, -1]
+      - [0, -1, 0]
+
+composites:
+  instability_index:
+    temporal:
+      - t2m_delta_24h
+    spatial:
+      - t2m_laplacian
+    formula: "t2m_delta_24h * t2m_laplacian"
+
+  moisture_temp_index:
+    temporal:
+      - d2m_roll_mean_6h
+      - t2m_roll_mean_6h
+    spatial:
+      - d2m_mean_3x3
+    formula: "(d2m_roll_mean_6h + t2m_roll_mean_6h) * d2m_mean_3x3"
+
+  pressure_context_index:
+    temporal:
+      - msl_roll_mean_24h
+    spatial:
+      - msl_mean_3x3
+    formula: "msl_roll_mean_24h * msl_mean_3x3"
+
+  wind_shear_index:
+    temporal:
+      - u10_roll_mean_6h
+      - v10_roll_mean_6h
+    spatial:
+      - u10_laplacian
+      - v10_laplacian
+    formula: "(u10_roll_mean_6h - v10_roll_mean_6h) * (u10_laplacian + v10_laplacian)"
+
+registry:
+  temporal:
+    - t2m_roll_mean_6h
+    - t2m_roll_mean_24h
+    - t2m_delta_24h
+    - d2m_roll_mean_6h
+    - d2m_roll_mean_24h
+    - d2m_delta_24h
+    - u10_roll_mean_6h
+    - u10_roll_mean_24h
+    - u10_delta_24h
+    - v10_roll_mean_6h
+    - v10_roll_mean_24h
+    - v10_delta_24h
+    - msl_roll_mean_6h
+    - msl_roll_mean_24h
+    - msl_delta_24h
+
+  spatial:
+    - t2m_mean_3x3
+    - t2m_laplacian
+    - d2m_mean_3x3
+    - d2m_laplacian
+    - u10_mean_3x3
+    - u10_laplacian
+    - v10_mean_3x3
+    - v10_laplacian
+    - msl_mean_3x3
+    - msl_laplacian
+
+  composite:
+    - instability_index
+    - moisture_temp_index
+    - pressure_context_index
+    - wind_shear_index
+
+ir4:
+  version: "5.0-features"
+
+paths:
+  input: data/spatiotemporal/stage4_tensor.nc
+  output: data/features/stage5_features.nc
+  metadata: data/features/stage5_metadata.json
+  qc: data/features/stage5_qc.json

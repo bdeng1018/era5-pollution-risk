@@ -3,8 +3,6 @@
 This document explains how data moves through the ERA5 Pollution Risk Pipeline.
 It provides a stage‑by‑stage walkthrough of the execution flow, the artifacts produced, and how each stage depends on the previous one.
 
----
-
 ## 1. Overview
 
 The pipeline processes ERA5 + pollution data through eight stages:
@@ -14,8 +12,6 @@ Stage 01 → Stage 02 → Stage 03 → Stage 04 → Stage 05 → Stage 06 → St
 ```
 
 Each stage is deterministic, diagnosable, and produces well‑defined IR artifacts.
-
----
 
 ## 2. End‑to‑End Flow Diagram
 
@@ -80,8 +76,6 @@ Each stage is deterministic, diagnosable, and produces well‑defined IR artifac
         │  - Build inference artifacts                   │
         └────────────────────────────────────────────────┘
 ```
-
----
 
 ## 3. Stage‑by‑Stage Flow
 
@@ -153,12 +147,10 @@ Stage 08 packages IR₇ evaluation + trained model into IR₈ deployment artifac
 
 These artifacts power the API server.
 
----
-
 ## 4. Artifact Flow Summary
 
 | Stage | Input | Output |
-|-------|-------|--------|
+| ------- | ------- | -------- |
 | Stage 01 | ERA5 API | `raw/era5/` |
 | Stage 02 | Raw ERA5 + pollution | `intermediate/` |
 | Stage 03 | Intermediate | `chunks/`, `chunks_metadata/` |
@@ -167,8 +159,6 @@ These artifacts power the API server.
 | Stage 06 | IR₅ | `model_ready/` (IR₆) |
 | Stage 07 | IR₆ + model | `evaluation/` (IR₇), `predictions/` (IR₇) |
 | Stage 08 | IR₇ + model | `deployment/` (IR₈) |
-
----
 
 ## 5. Diagnostics Flow
 
@@ -193,8 +183,6 @@ make diagnostics
 
 executes all of them in order.
 
----
-
 ## 6. Logging Flow
 
 Logs are stage‑specific:
@@ -217,8 +205,6 @@ Each log captures:
 - timestamps
 - diagnostic results
 
----
-
 ## 7. Final Output
 
 The final deliverables of the pipeline are IR₈ deployment artifacts:
@@ -236,8 +222,6 @@ These artifacts include:
 - versioning information
 
 They are consumed by the API server for production inference.
-
----
 
 ## 8. Contact
 

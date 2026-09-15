@@ -1,6 +1,6 @@
-# ERA5 Compiler Pipeline — Branch 2 (Deterministic Ingestion → Preprocessing → Chunking → Spatiotemporal Structuring)
+# ERA5 Compiler Pipeline — Branch 2
 
-Branch 2 is the deterministic engineering foundation of the ERA5 compiler pipeline. It implements **single‑variable ingestion**, **deterministic preprocessing**, **parallel‑safe chunking**, and **dense spatiotemporal tensor construction**. It replaces the Branch 1 MVP with a compiler‑style architecture designed for multi‑year, multi‑variable ERA5 analytics and downstream ML workflows.
+Branch 2 is the deterministic engineering foundation of the ERA5 compiler pipeline. It implements **multi‑variable ingestion**, **deterministic preprocessing**, **parallel‑safe chunking**, **dense spatiotemporal tensor construction**, and **completed feature engineering (IR₅)**. It replaces the Branch 1 MVP with a compiler‑style architecture designed for multi‑year, multi‑variable ERA5 analytics and downstream ML workflows.
 
 Branch 2 establishes:
 
@@ -9,145 +9,172 @@ Branch 2 establishes:
 - parallel-safe chunk planning and execution
 - structured logging and diagnostics
 - reproducible intermediate artifacts
-- a clear forward roadmap toward feature engineering, dataset assembly, modeling, and evaluation
+- a clear forward roadmap toward datasets, models, evaluation, and deployment
 
 ---
 
 ## 🧭 Architecture Overview
 
-Branch 2 implements a **four-stage ERA5 compiler pipeline**, where each stage produces a well‑defined intermediate representation (IR):
+The ERA5 pipeline is a **compiler‑style system** defined by its Intermediate Representations (IRs).
+Each IR marks a **stable, deterministic boundary** between pipeline stages.
 
-```code
-IR₀ (GRIB diagnostic)
-→ IR₁ (Parquet canonical)
-→ IR₂ (Chunked Parquet)
-→ IR₃ (Dense spatiotemporal tensors)
-→ [future] Features → Datasets → Models → Evaluation
+```text
+IR₀ — Raw ERA5 GRIB
+IR₁ — Hourly Parquet + metadata.json
+IR₂ — Chunked Parquet Tiles
+IR₃ — merged.nc + QC (Unified Dataset)
+IR₄ — Spatiotemporal Tensor + Stage 4 Contracts
+IR₅ — Feature Tensors
+IR₆ — Model‑Ready Datasets
+IR₇ — Predictions + Evaluation Artifacts
+IR₈ — Deployment Artifacts
 ```
+
+Branch 2 currently implements IR₀ → IR₅. IR₆ → IR₈ are planned for later release.
 
 ---
 
 ## 🏗️ Stage Overview
 
-### Stage 1 — Ingestion (WIP)
+### Stage 1 — Ingestion
 
-#### IR₀ input generation
+#### Produces: IR₀ — Raw ERA5 GRIB
 
-- CDS API client
-- Retry logic
-- Directory validation
-- Config‑driven execution
-- Produces raw GRIB files for Stage 2
-- Some tests expected to fail during active development
+Artifacts:
 
-#### Invariants
+- Multi‑variable GRIB files
+- Raw coordinate grids
+- `.idx` index files (optional)
+- ZIP extraction (backward‑compatible)
 
-- Directory structure must match config
-- All downloads logged with metadata
-
-#### Diagnostics
-
-- Retry logs
-- Directory validation logs
-
----
-
-### Stage 2 — Preprocessing (Stable)
-
-#### IR₀ → IR₁ compiler stage
-
-Outputs:
-
-- `grib_metadata.json` — GRIB‑level diagnostic metadata (IR₀)
-- `metadata.json` — canonical hourly Parquet metadata (IR₁)
-
-#### Invariants
-
-- Only instantaneous variables appear in metadata
-- Flux/static variables excluded
-- No tail‑hour timestamps
-- All Parquets have normalized coordinates
-
-#### Diagnostics
-
-- `.idx` generation logs
-- Tail‑hour warnings
-- Parquet validation logs
-
-Canonical layout:
+Directory:
 
 ```code
-data/intermediate/<year>/<month>/<variable>/<variable>_<timestamp>.parquet
+data/raw/
 ```
 
+Diagnostics: retry logs, directory validation.
+
+### Stage 2 — Preprocessing
+
+#### Consumes: IR₀
+
+#### Produces: IR₁ — Hourly Parquet + metadata.json
+
+Artifacts:
+
+- Hourly Parquet slices
+- `metadata.json` (canonical IR₁)
+- `grib_metadata.json` (diagnostic IR₀)
+
+Directory:
+
+```code
+data/intermediate/
+data/metadata/
+```
+
+### Import‑Time Purity
+
+Stage 2 modules must remain lightweight:
+
+- No heavy libraries (`cfgrib`, `eccodes`, `xarray`) at module load
+- Heavy imports allowed **only during conversion** (lazy import pattern)
+
+This ensures deterministic startup and test stability.
+
+### Stage 3 — Chunk Engine
+
+#### Consumes: IR₁
+
+#### Produces: IR₂ — Chunked Parquet Tiles
+
+#### Also produces: IR₃ — merged.nc + QC (Stage 03 Merge)
+
+Artifacts:
+
+- Chunk parquet tiles
+- Chunk metadata
+- Unified merged dataset (`merged.nc`)
+- QC reports (`merged_qc.json`)
+
+Directory:
+
+```code
+data/chunks/
+data/chunks_metadata/
+data/intermediate/merged.nc
+```
+
+Diagnostics: planner logs, worker isolation logs, QC reports.
+
+### Stage 4 — Spatiotemporal Compiler
+
+#### Consumes: IR₂ + IR₃
+
+#### Produces: IR₄ — Spatiotemporal Tensor + Contracts
+
+Artifacts:
+
+- Canonical spatiotemporal tensor
+- Grid, mask, temporal, QC, metadata contracts
+
+Directory:
+
+```code
+data/spatiotemporal/
+```
+
+Diagnostics: tensor shape logs, grid alignment checks, temporal continuity checks.
+
+### Stage 5 — Feature Engineering
+
+#### Consumes: IR₄
+
+#### Produces: IR₅ — Feature Tensors
+
+Artifacts:
+
+- Derived meteorological features
+- Pollution‑risk composites
+- Rolling windows, anomalies, gradients
+- Feature registry + metadata
+
+Directory:
+
+```code
+data/features/
+```
+
+IR₅ is **complete** in Branch 2.
+
+Ongoing work focuses on registry expansion and composite pollution‑risk features.
+
 ---
 
-### Stage 3 — Chunked Core Processing (Stable)
-
-#### IR₁ → IR₂ compiler stage
-
-- Metadata‑driven chunk planning
-- Deterministic transforms
-- Parallel‑safe worker isolation
-- Schema‑validated Parquet outputs
-- Produces **chunked Parquet IR₂**
-
-#### Invariants
-
-- Chunk boundaries deterministic
-- No NaNs in merged chunks
-- Schema‑validated outputs
-
-#### Diagnostics
-
-- Chunk planner logs
-- Worker isolation logs
-- Schema validation reports
-
----
-
-### Stage 4 — Spatiotemporal Tensor Builder (Stable)
-
-#### IR₂ → IR₃ compiler stage
-
-- Dense tensor construction
-- Grid normalization
-- Multi‑year tensor stitching
-- Deterministic tensor shapes
-- Tensor metadata + diagnostics
-- Produces **tensors (IR₃)** ready for feature engineering
-
-#### Invariants
-
-- Tensor shapes deterministic
-- No sparsity
-- Grid normalization applied consistently
-- Multi‑year stitching produces continuous temporal coverage
-
-#### Diagnostics
-
-- Tensor shape logs
-- Grid alignment checks
-- Temporal continuity checks
-
----
-
-## 🔁 Intermediate Representation (IR) Evolution
+## 🔁 Full IR Evolution (IR₀ → IR₈)
 
 Branch 2 uses a compiler‑style IR evolution:
 
-```code
-GRIB (raw)
-→ Parquet (normalized hourly)
-→ Chunked Parquet (structured, schema‑validated)
-→ Tensors (dense spatiotemporal arrays)
-→ [Stage 5] Features (engineered domain features)
-→ [Stage 6] Datasets (train/val/test windows)
-→ [Stage 7] Models (baseline + deep learning)
-→ [Stage 8] Evaluation (spatial + temporal metrics)
+```text
+IR₀ — Raw ERA5 GRIB
+    ↓ Stage 02 (Preprocessing)
+IR₁ — Hourly Parquet + metadata.json
+    ↓ Stage 03 Worker
+IR₂ — Chunked Parquet Tiles
+    ↓ Stage 03 Merge
+IR₃ — merged.nc + QC
+    ↓ Stage 04 Compiler
+IR₄ — Spatiotemporal Tensor + Contracts
+    ↓ Stage 05 Features
+IR₅ — Feature Tensors
+    ↓ Stage 06 (Planned)
+IR₆ — Model‑Ready Datasets
+    ↓ Stage 07 (Planned)
+IR₇ — Predictions + Evaluation Artifacts
+    ↓ Stage 08 (Planned)
+IR₈ — Deployment Artifacts
 ```
-
-Each stage increases structure, determinism, and ML‑readiness.
 
 ---
 
@@ -165,45 +192,32 @@ Branch 2 explicitly handles:
 - tensor sparsity
 - tensor shape mismatch
 
-Diagnostics are emitted at every stage to detect and prevent these issues.
+Diagnostics emitted at every stage.
 
 ---
 
-## 🔮 Future Roadmap (Concise, High-Signal)
+## 🔮 Future Roadmap (IR₆ → IR₈)
 
-Branch 2 establishes the engineering foundation.
-Stages 5–8 introduce analytics, ML, and deployment.
-
-### Stage 5 - Feature Engineering
-
-- Temporal aggregations
-- Spatial aggregations
-- Pollution‑specific engineered features
-- Feature schema versioning
-
-### Stage 6 - ML Dataset Assembly
+### Stage 6 — IR₆ Model‑Ready Datasets
 
 - Train/val/test splits
-- Temporal windows
-- Spatial windows
-- Target construction
-- Dataset versioning
+- Normalized datasets
+- Model manifests
+- Versioned artifacts
 
-### Stage 7 — Modeling
+### Stage 7 — IR₇ Predictions + Evaluation
 
-- Baseline models
-- Deep learning models
-- Hyperparameter search
-- Model metadata
-- Reproducibility contracts
+- Predictions
+- Regression metrics
+- Residuals
+- Diagnostic plots
 
-### Stage 8 — Evaluation & Deployment
+### Stage 8 — IR₈ Deployment
 
-- Spatial/temporal evaluation
-- Metrics
-- Model cards
-- Deployment artifacts
-- Monitoring
+- Docker images
+- FastAPI inference server
+- CI/CD manifests
+- Batch + online inference endpoints
 
 ---
 
@@ -212,9 +226,10 @@ Stages 5–8 introduce analytics, ML, and deployment.
 | Stage | Status | Notes |
 | ------- | -------- | ------- |
 | Stage 1 | ⚠️ WIP | Some tests failing (expected) |
-| Stage 2 | ✅ Stable | Deterministic, restart-safe |
+| Stage 2 | ✅ Stable | Deterministic, restart-safe, import‑time purity enforced |
 | Stage 3 | ✅ Stable | Schema-validated, parallel-safe |
 | Stage 4 | ✅ Stable | Dense tensors, deterministic shapes |
+| Stage 5 | ✅ Stable | Feature tensors complete |
 
 ---
 
@@ -316,6 +331,12 @@ python -m src.core_03 --config configs/config.yml
 python -m src.spatiotemporal_04.driver --config configs/config.yml
 ```
 
+### Stage 5
+
+```bash
+python -m src.features_05 --config configs/stage5.yml
+```
+
 ### Makefile
 
 ```makefile
@@ -331,11 +352,15 @@ core:
 spatiotemporal:
     python -m src.spatiotemporal_04.driver --config configs/config.yml
 
+features:
+    python -m src.features_05 --config configs/stage5.yml
+
 all:
     make download
     make preprocess
     make core
     make spatiotemporal
+    make features
 ```
 
 ---
@@ -343,9 +368,12 @@ all:
 ## 🏛️ Branch Policy
 
 - Stage 1 may fail during active development
-- Stage 2 must remain deterministic
+- Stage 2 must remain deterministic and import‑time lightweight
+- GRIB decoding occurs via runtime‑only lazy imports
 - Stage 3 must remain deterministic
 - Stage 4 must produce dense tensors
+- `main` branch remains stable
+- Stage 5 must produce deterministic IR₅ features
 - `main` branch remains stable
 - Branch 2 is safe to push
 
@@ -353,8 +381,8 @@ all:
 
 ## 📈 Branch 1 → Branch 2 Snapshot
 
-Branch 1 = MVP <br>
-Branch 2 = production‑aligned pipeline <br>
+Branch 1 = MVP  <br>
+Branch 2 = production‑aligned pipeline  <br>
 Branch 3 = distributed parallelization (future)
 
 Key Branch 2 upgrades:
@@ -372,7 +400,7 @@ Key Branch 2 upgrades:
 
 ## 📬 Maintainer
 
-**Brian Deng** <br>
+**Brian Deng**  <br>
 Los Angeles, CA
 
 **Focus:**

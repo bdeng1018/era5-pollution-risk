@@ -46,7 +46,7 @@ from pathlib import Path
 
 import pandas as pd
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 METADATA_PATH = Path("data/metadata/metadata.json")
 CHUNK_DIR = Path("data/chunks")
@@ -66,9 +66,9 @@ INSTANT_VARS = {
     "v10",
 }
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Helpers — Key‑Indexed Metadata
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def load_metadata() -> dict:
@@ -81,7 +81,7 @@ def load_metadata() -> dict:
 def get_all_timestamps(metadata: dict) -> list[str]:
     """Extract all timestamps from key‑indexed metadata."""
     ts_list = []
-    for key, entry in metadata.items():
+    for entry in metadata.values():
         ts_list.append(entry["timestamp"])
     return sorted(set(ts_list))
 
@@ -89,7 +89,7 @@ def get_all_timestamps(metadata: dict) -> list[str]:
 def get_parquets_for_variable(metadata: dict, var: str) -> list[str]:
     """Return ALL parquet paths for a variable."""
     paths = []
-    for key, entry in metadata.items():
+    for entry in metadata.values():
         if entry.get("variable") == var:
             paths.append(entry.get("path"))
     return paths
@@ -97,15 +97,15 @@ def get_parquets_for_variable(metadata: dict, var: str) -> list[str]:
 
 def get_one_parquet_for_variable(metadata: dict, var: str) -> str | None:
     """Return ONE parquet path for a variable."""
-    for key, entry in metadata.items():
+    for entry in metadata.values():
         if entry.get("variable") == var:
             return entry.get("path")
     return None
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Stage 3 chunk loader
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def load_stage3_chunk(var: str, ts: str) -> pd.DataFrame | None:
@@ -119,9 +119,9 @@ def load_stage3_chunk(var: str, ts: str) -> pd.DataFrame | None:
         return None
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Timestamp coverage
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def check_timestamp_coverage(metadata: dict):
@@ -149,9 +149,9 @@ def check_timestamp_coverage(metadata: dict):
     return len(issues) == 0, issues
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Stage 3 grid alignment
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def check_grid_alignment():
@@ -184,9 +184,9 @@ def check_grid_alignment():
     return len(issues) == 0, issues
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Main diagnostic
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def main():

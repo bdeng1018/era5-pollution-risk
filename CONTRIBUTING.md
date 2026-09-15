@@ -1,38 +1,39 @@
 # CONTRIBUTING.md - ERA5 Pollution‑Risk Pipeline (Branch 2)
 
 Thank you for your interest in contributing to **era5-pollution-risk**.
-Branch 2 implements a reproducible, multi‑stage ERA5 ingestion, preprocessing, chunking, feature‑engineering, modeling, evaluation, and deployment pipeline.
-
+Branch 2 implements a **deterministic, multi‑stage ERA5 compiler pipeline** defined by its Intermediate Representations (IR₀ → IR₅).
 This document describes how to contribute code, documentation, tests, diagnostics, and tooling.
 
 ---
 
 ## 📦 Repository Structure
 
-Branch 2 is organized into eight pipeline stages:
+Branch 2 currently implements IR₀ → IR₅:
 
 ```text
 src/
-  download_01/           # Stage 01 — ERA5 GRIB download
-  preprocessing_02/      # Stage 02 — unzip → inspect → convert → metadata
-  core_03/               # Stage 03 — chunk planner → orchestrator → worker → merge
-  spatiotemporal_04/     # Stage 04 — grid → mask → align → interpolate → qc → tensor builder
-  features_05/           # Stage 05 — feature engineering (planned)
-  modeling_06/           # Stage 06 — modeling (planned)
-  evaluation_07/         # Stage 07 — evaluation (planned)
-  deployment_08/         # Stage 08 — deployment scaffolding (planned)
+  download_01/           # Stage 01 — IR₀: Raw ERA5 GRIB ingestion
+  preprocessing_02/      # Stage 02 — IR₀ → IR₁: Hourly Parquet + metadata.json
+  core_03/               # Stage 03 — IR₁ → IR₂ → IR₃: Chunk workers + merge
+  spatiotemporal_04/     # Stage 04 — IR₂/IR₃ → IR₄: Spatiotemporal tensor + contracts
+  features_05/           # Stage 05 — IR₄ → IR₅: Feature tensors (completed)
+  modeling_06/           # Stage 06 — IR₅ → IR₆: Model-ready datasets (planned)
+  evaluation_07/         # Stage 07 — IR₆ → IR₇: Predictions + evaluation (planned)
+  deployment_08/         # Stage 08 — IR₇ → IR₈: Deployment artifacts (planned)
 ```
 
 Data artifacts:
 
 ```text
-data/raw/era5/
-data/intermediate/
-data/chunks/
-data/chunks_metadata/
-data/spatiotemporal/
-data/features/
-data/predictions/
+data/raw/era5/           # IR₀
+data/intermediate/       # IR₁ + IR₃
+data/chunks/             # IR₂
+data/chunks_metadata/    # IR₂ metadata
+data/spatiotemporal/     # IR₄
+data/features/           # IR₅
+data/datasets/           # IR₆ (future)
+data/predictions/        # IR₇ (future)
+deployment/              # IR₈ (future)
 data/logs/
 data/metadata/
 ```
@@ -58,9 +59,9 @@ diagrams/
 
 ---
 
-## 🧰 Development Environment
+## 🧰 Development Environment (Import‑Time Purity)
 
-Branch 2 uses a **project‑local virtual environment** (.venv) for all pipeline execution, testing, and development.
+Branch 2 uses a **project‑local virtual environment** (`.venv`) for pipeline execution, testing, and development.
 
 ### Create the environment
 
@@ -83,7 +84,13 @@ conda activate era5-pollution-risk
 ```
 
 **Important:**
-Pipeline execution must occur inside `.venv` to avoid conflicts with Conda’s eccodes and GRIB indexing.
+
+Stage 2 must remain **import‑time lightweight**:
+
+- No heavy imports (`cfgrib`, `eccodes`, `xarray`) at module load
+- Heavy imports allowed **only inside conversion helpers**
+
+Pipeline execution must occur inside `.venv` to avoid conflicts with Conda’s GRIB tooling.
 
 ### Validate the environment
 
@@ -118,17 +125,17 @@ Do not commit SVG or draw.io files unless explicitly required.
 Each stage can be executed individually via Makefile:
 
 ```bash
-make stage01
-make stage02
-make stage03
-make stage04
-make stage05
-make stage06
-make stage07
-make stage08
+make stage01   # IR₀
+make stage02   # IR₀ → IR₁
+make stage03   # IR₁ → IR₂ → IR₃
+make stage04   # IR₂/IR₃ → IR₄
+make stage05   # IR₄ → IR₅
+make stage06   # IR₅ → IR₆ (planned)
+make stage07   # IR₆ → IR₇ (planned)
+make stage08   # IR₇ → IR₈ (planned)
 ```
 
-Full pipeline:
+Full pipeline (Stages 01-05):
 
 ```bash
 make run
@@ -173,8 +180,9 @@ pytest tests/spatiotemporal_04
 - ensure deterministic outputs
 - test both engine logic and writer behavior
 - test chunking, merging, and tensor‑builder correctness
+- test IR boundary transitions (`@pytest.mark.ir`)
 
-Branch 2 introduces **full validation, fixtures, and integration tests**.
+Branch 2 introduces **full validation, fixtures, IR boundary tests, and integration tests**.
 
 ---
 
@@ -197,11 +205,11 @@ isort src tests scripts models
 
 ---
 
-## 📘 Documentation
+## 📘 Documentation Requirements
 
 Each stage must include:
 
-- a `README.md` describing inputs, outputs, architecture, and runner behavior
+- a `README.md` describing inputs, outputs, IR boundaries, architecture, and runner behavior
 - module‑level docstrings
 - function‑level docstrings (NumPy‑style)
 
@@ -231,13 +239,13 @@ def convert_grib_to_parquet(path: Path) -> Path:
 To add or modify a pipeline stage:
 
 1. Create or update the directory under `src/`
-2. Add or update the stage README.md
+2. Add or update the stage README.md (must define IR input/output)
 3. Add `__init__.py`
 4. Add engine modules (planner, orchestrator, worker, writer, etc.)
 5. Add diagnostics under `scripts/diagnostics/stageXX/`
-6. Add tests under `tests/`
-7. Update the Makefile
-8. Update the root README
+6. Add tests under `tests/` (include IR boundary tests)
+7. Update the Makefile (stage target + IR comment)
+8. Update the root README (IR boundary diagram)
 9. Update `CHANGELOG.md` under `[Unreleased]`
 
 ---
@@ -266,9 +274,9 @@ This enables `make help`.
 
 This project uses semantic versioning:
 
-- `0.2.x` — Branch 2 (Stages 01–08)
-- `0.3.x` — Modeling expansion + evaluation reports
-- `0.4.x` — Deployment + dashboards
+- `0.2.x` — Branch 2 (IR₀ → IR₅)
+- `0.3.x` — Modeling expansion + evaluation reports (IR₆ → IR₇)
+- `0.4.x` — Deployment + dashboards (IR₈)
 
 All changes must be recorded in `CHANGELOG.md` under:
 
@@ -285,7 +293,7 @@ Tags are created only when a milestone is complete.
 Pull requests should:
 
 - be atomic
-- include tests
+- include tests (unit + IR boundary + integration)
 - update documentation
 - update `CHANGELOG.md`
 - pass linting and formatting
@@ -301,7 +309,7 @@ See `CODE_OF_CONDUCT.md` for community guidelines.
 
 ## 📬 Contact
 
-Maintainer: **Brian Deng** <br>
-Location: Los Angeles, CA <br>
-Email: **<bdeng.data.pipelines@gmail.com>** <br>
+Maintainer: **Brian Deng**  <br>
+Location: Los Angeles, CA  <br>
+Email: **<bdeng.data.pipelines@gmail.com>**  <br>
 Focus: scientific computing, climate data engineering, analytics systems design, reproducible pipelines, technical writing

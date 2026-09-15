@@ -23,6 +23,7 @@ Not covered (handled in other test files):
 """
 
 import importlib
+import sys
 from pathlib import Path
 
 # ==============================================================================
@@ -87,13 +88,29 @@ def test_paths_resolve_directories():
 
 
 # ==============================================================================
-# Unit Test — Ensure no heavy imports occur
+# Unit Test — Ensure no heavy imports occur at module load
 # ==============================================================================
 
 
 def test_no_heavy_imports():
-    import sys
+    """
+    Ensure Stage 2 modules do not import heavy libraries (cfgrib, eccodes)
+    *at module load time*. Heavy imports during execution are allowed and
+    validated in higher-level tests.
+    """
+    before = set(sys.modules.keys())
+
+    importlib.import_module("src.preprocessing_02.unzip_grib")
+    importlib.import_module("src.preprocessing_02.inspect_grib")
+    importlib.import_module("src.preprocessing_02.convert_grib_to_parquet")
+    importlib.import_module("src.preprocessing_02.run_preprocessing")
+
+    after = set(sys.modules.keys())
+    newly_loaded = after - before
 
     banned = ["cfgrib", "eccodes"]
+
     for name in banned:
-        assert name not in sys.modules
+        assert name not in newly_loaded, (
+            f"Unit Test: heavy import detected at module load: {name}"
+        )

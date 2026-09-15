@@ -121,7 +121,7 @@ def test_chunk_merge_small(tmp_path):
     # --------------------------------------------------------------------------
     # 5. Run merge
     # --------------------------------------------------------------------------
-    ds = merge_chunks(
+    merge_chunks(
         chunk_specs=[spec_a, spec_b],
         config=config,
     )

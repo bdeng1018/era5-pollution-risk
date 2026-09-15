@@ -8,16 +8,26 @@ introduced in Branch 3. Utilities are intentionally minimal and safe to
 import in all execution contexts.
 
 Current contents:
+- configuration loading (load_config, load_paths, load_yaml)
+- deterministic path resolution (Paths, get_path)
 - environment validation (env_check)
-- lightweight logging helpers (logging)
-- simple metadata utilities (metadata)
-- minimal path helpers (ensure_dir)
+- lightweight logging helpers
+- simple metadata utilities
+- minimal filesystem helpers (ensure_dir)
 
-Branch 2 Note
--------------
+Branch 2 Notes
+--------------
 The ingestion and preprocessing pipeline (Stages 1–2) does not rely on this
-package. Utilities are used primarily in later deterministic stages (Stages 3–4)
+package. Utilities are used primarily in later deterministic stages (Stages 3–5)
 and general tooling.
+
+Stage 05 Note
+-------------
+Feature engineering (IR5) uses:
+- load_yaml() for stage-specific configs
+- get_path() for deterministic path resolution
+- metadata + QC helpers
+These utilities remain side‑effect‑free and import‑safe.
 
 Branch 3 Note
 -------------

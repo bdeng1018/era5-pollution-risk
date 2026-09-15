@@ -16,12 +16,14 @@ This roadmap outlines the development trajectory for the ERA5 Pollution Risk Pip
 ### Branch 2 — Multi‑Variable Expansion (In Progress)
 
 - Multi‑variable ingestion
-- GRIB metadata extraction
+- GRIB metadata extraction (IR₀)
 - Chunk engine + IR₄ compiler
 - Expanded feature engineering (IR₅)
 - Modeling + evaluation upgrades
 - Reporting + runner scaffolding
 - Fully deterministic, **no AI/LLM/RAG**
+- **Import‑time purity:** Stage 2 modules load without heavy dependencies
+- **Runtime‑only GRIB decoding:** heavy libraries (`cfgrib`, `eccodes`, `xarray`) are loaded lazily inside conversion functions
 
 ### Branch 3 — AI/LLM/RAG + Intelligent Analytics (Planned)
 
@@ -43,38 +45,39 @@ It augments them with intelligent tooling.
 
 ### Stage 01 — Multi‑Variable ERA5 Ingestion
 
-**Status:** Complete
+**Status:** Complete  <br>
 **Next:** Additional meteorological variables as needed.
 
 ### Stage 02 — GRIB Metadata + Preprocessing
 
-**Status:** Complete
-**Next:** Expand metadata parquet (units, long_name, standard_name).
+**Status:** Complete  <br>
+**Next:** Expand metadata parquet (units, long_name, standard_name).  <br>
+**Import‑time guarantee:** No heavy imports (`cfgrib`, `eccodes`, `xarray`).  <br>
+**Runtime behavior:** GRIB decoding occurs via lazy imports inside conversion.
 
 ### Stage 03 — Chunk Engine
 
-**Status:** Complete
+**Status:** Complete  <br>
 **Next:** Region‑specific chunking + multi‑resolution support.
 
 ### Stage 04 — Spatiotemporal Compiler (IR₄)
 
-**Status:** Complete
+**Status:** Complete  <br>
 **Next:** IR₄ schema freeze + diagnostics.
 
 ### Stage 05 — Feature Engineering (IR₅)
 
-**Status:** In Progress
-**Next:**
+**Status:** Complete  <br>
+**Next (iteration):**
 
-- Feature registry
-- Pollution integration
-- Composite features
+- Feature registry expansion
+- Pollution‑risk composite features
 - Rolling windows + lags
-- Feature metadata
+- Feature metadata enrichment
 
 ### Stage 06 — Modeling
 
-**Status:** Planned
+**Status:** Planned  <br>
 **Next:**
 
 - Multiple model families
@@ -83,7 +86,7 @@ It augments them with intelligent tooling.
 
 ### Stage 07 — Evaluation
 
-**Status:** Planned
+**Status:** Planned  <br>
 **Next:**
 
 - Full regression metrics
@@ -93,7 +96,7 @@ It augments them with intelligent tooling.
 
 ### Stage 08 — Reporting + Runner
 
-**Status:** Planned
+**Status:** Planned  <br>
 **Next:**
 
 - Unified reporting layer
@@ -151,9 +154,9 @@ Completed in Branch 2.
 
 Completed in Branch 2.
 
-### 🔄 Milestone C — IR₅ Feature Engineering
+### ✔️ Milestone C — IR₅ Feature Engineering
 
-In progress.
+Completed in Branch 2.
 
 ### ⏳ Milestone D — Modeling + Evaluation
 
@@ -172,12 +175,12 @@ Planned for Branch 3.
 ## 5. Stability Levels
 
 | Component | Stability |
-|----------|-----------|
+| ---------- | ----------- |
 | Raw ERA5 ingestion | Stable |
-| GRIB preprocessing | Stable |
+| GRIB preprocessing | Stable (import‑time purity enforced) |
 | Chunk engine | Stable |
 | IR₄ compiler | Stable |
-| IR₅ features | Evolving |
+| IR₅ features | Stable (iterating) |
 | Modeling | Planned |
 | Evaluation | Planned |
 | Reporting | Planned |
@@ -195,14 +198,17 @@ Planned for Branch 3.
 - **[Data Dictionary](ca://s?q=Explain_DATA_DICTIONARY_md)**
 - **[Schema Reference](ca://s?q=Explain_SCHEMA_REFERENCE_md)**
 - **[Onboarding](ca://s?q=Explain_ONBOARDING_md)**
-- **[Index](ca://s?q=Explain_INDEX_md)**
-- CHANGELOG.md
-- ROADMAP.md
+- **[Documentation Index](ca://s?q=Explain_INDEX_md)**
+- **[Stage 04 Design](ca://s?q=Explain_STAGE04_DESIGN_md)**
+- **[Stage 05 Design](ca://s?q=Explain_STAGE05_DESIGN_md)**
+- **[Changelog](ca://s?q=Explain_CHANGELOG_md)**
+- **[Roadmap](ca://s?q=Explain_ROADMAP_md)**
 
 ### Planned
 
-- STAGE04_DESIGN.md (after IR₄ freeze)
-- STAGE05_DESIGN.md (after IR₅ freeze)
+- IR₆ modeling documentation
+- IR₇ evaluation documentation
+- IR₈ deployment documentation
 - FEATURE_REGISTRY.md
 - MODEL_READY_SCHEMA.md
 - API_REFERENCE.md (Branch 3)
@@ -220,11 +226,13 @@ Planned for Branch 3.
 - Branch‑based development
 - No AI inference in Branch 2
 - AI tooling introduced in Branch 3
+- Import‑time purity for Stage 2
+- Runtime‑only heavy imports for GRIB decoding
 
 ---
 
 ## 8. Contact
 
-Maintainer: Brian Deng
-Email: <bdeng.data.pipelines@gmail.com>
+Maintainer: Brian Deng  <br>
+Email: <bdeng.data.pipelines@gmail.com>  <br>
 GitHub: <https://github.com/bdeng1018>

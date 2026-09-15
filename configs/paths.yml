@@ -1,40 +1,50 @@
 # ==============================================================================
-# Branch 2 Directory Paths (canonical)
+# Branch 2 Directory Paths (canonical, IR0 → IR5)
 # ==============================================================================
 
-# RAW DATA — ERA5 GRIB files + metadata
+# RAW DATA — IR0 ERA5 GRIB files + metadata
 raw_dir: data/raw/era5
 metadata_dir: data/metadata
 
-# INTERMEDIATE — GRIB → Parquet conversion outputs (Stage 2)
+# INTERMEDIATE — IR1 hourly parquet + IR3 merged.nc
 intermediate_dir: data/intermediate
 
 # LOGS — runtime logs
 logs_dir: data/logs
 
-# FEATURES — ML-ready features (Stage 4)
+# FEATURES — IR5 feature tensors
 features_dir: data/features
+features_tensor: data/features/stage5_features.nc
+features_metadata: data/features/stage5_metadata.json
+features_qc: data/features/stage5_qc.json
+features_registry: data/features/registry.json
 
-# MODEL ARTIFACTS — trained model files (Stage 6)
+# MODEL ARTIFACTS — Stage 6 (future)
 model_artifact_dir: models
 
-# PREDICTIONS — model outputs (Stage 7)
+# PREDICTIONS — Stage 7 (future)
 predictions_dir: data/predictions
 
-# CONFIGS — Branch 2 config files (variables, years, months)
+# CONFIGS — Branch 2 config files
 config_dir: configs
 
 # ==============================================================================
-# Stage 3 Chunk Outputs (Branch 2)
+# Stage 3 Chunk Outputs — IR2
 # ==============================================================================
 chunk_output_dir: data/chunks
-
-# Stage 3 Metadata (per-chunk JSON)
 chunk_metadata_dir: data/chunks_metadata
 
 # ==============================================================================
-# Stage 3 Merge Outputs (Branch 2)
+# Stage 3 Merge Outputs — IR3
 # ==============================================================================
 stage3_merged: data/intermediate/merged.nc
 stage3_metadata: data/intermediate/merged_metadata.json
 stage3_qc: data/intermediate/merged_qc.json
+
+# ==============================================================================
+# Stage 4 Tensor Outputs — IR4
+# ==============================================================================
+stage4_output_dir: data/spatiotemporal
+stage4_tensor: data/spatiotemporal/stage4_tensor.nc
+stage4_metadata: data/spatiotemporal/stage4_metadata.pkl
+stage4_qc: data/spatiotemporal/stage4_qc.pkl

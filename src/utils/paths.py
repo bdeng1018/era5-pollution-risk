@@ -93,3 +93,57 @@ class Paths:
             f"  stage3_qc={self.stage3_qc}\n"
             ")"
         )
+
+
+# ==============================================================================
+# Branch 2‑compatible helper for Stage 05–08
+# ==============================================================================
+
+
+def get_path(cfg: dict, dotted_key: str) -> str:
+    """
+    Lightweight deterministic path resolver for Stage 05–08.
+
+    This helper reads nested config keys using dotted notation and resolves
+    the resulting relative path against the project root. It does NOT modify
+    or interfere with the Branch 2 Paths class.
+
+    Example
+    -------
+        cfg:
+            paths:
+                input: "data/spatiotemporal/stage4_tensor.nc"
+
+        get_path(cfg, "paths.input")
+        → "/Users/.../era5-pollution-risk/data/spatiotemporal/stage4_tensor.nc"
+
+    Architecture Notes
+    ------------------
+    - Deterministic: always resolves relative to project root.
+    - Side‑effect‑free: no directory creation.
+    - Import‑safe: no heavy dependencies.
+    - Branch‑2‑compatible: does not alter Paths() behavior.
+    - Designed for Stage 05–08, which are config‑driven.
+
+    Parameters
+    ----------
+    cfg : dict
+        Loaded YAML configuration dictionary.
+    dotted_key : str
+        Dotted key path (e.g., "paths.output").
+
+    Returns
+    -------
+    str
+        Absolute path resolved against project root.
+    """
+    parts = dotted_key.split(".")
+    node = cfg
+    for p in parts:
+        node = node.get(p, {})
+
+    if not isinstance(node, str):
+        raise ValueError(f"Config key '{dotted_key}' did not resolve to a string path.")
+
+    project_root = Path(__file__).resolve().parents[2]
+    return str(project_root / node)

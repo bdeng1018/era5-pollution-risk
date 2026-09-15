@@ -51,7 +51,7 @@ def test_worker_full_pipeline(tmp_path):
     # --------------------------------------------------------------------------
     # 2. Build schema + ChunkSpec
     # --------------------------------------------------------------------------
-    schema = ChunkSchema(
+    ChunkSchema(
         {
             "schema": {
                 "columns": ["time", "lat", "lon", "t2m"],

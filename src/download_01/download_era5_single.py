@@ -52,8 +52,13 @@ from pathlib import Path
 import cdsapi  # required for monkeypatching
 
 from src.download_01.paths import Paths
-from src.utils.config import (load_config_yaml, load_months, load_region,
-                              load_variables, load_years)
+from src.utils.config import (
+    load_config_yaml,
+    load_months,
+    load_region,
+    load_variables,
+    load_years,
+)
 from src.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -252,23 +257,35 @@ def download_variable(variable: str, year: str, month: str) -> Path | None:
         except Exception as e:
             logger.error(f"[stage1] Failed to normalize filename: {e}")
 
-    # Write metadata using shortName
-    metadata_path = Path(paths.metadata_dir) / f"metadata_{short}_{year}_{month}.json"
-    metadata_path.write_text(
-        json.dumps(
-            {
-                "variable": short,
-                "year": year,
-                "month": month,
-                "success": result is not None,
-                "config_valid": config_ok,
-                "outfile": str(short_file if result is not None else outfile),
-            },
-            indent=2,
-        )
-    )
+    # ==========================================================================
+    # Metadata writing rules:
+    #   • Write metadata ONLY if download succeeded.
+    #   • Tests expect no metadata file when retries are exhausted.
+    # ==========================================================================
 
-    return short_file if result is not None else None
+    if result is not None:
+        metadata_path = (
+            Path(paths.metadata_dir) / f"metadata_{variable}_{year}_{month}.json"
+        )
+
+        metadata_payload = {
+            "variable": variable,  # required by tests
+            "variable_short": short,
+            "year": year,
+            "month": month,
+            "success": True,
+            "config_valid": config_ok,
+            "outfile": str(short_file),
+        }
+
+        metadata_path.write_text(json.dumps(metadata_payload, indent=2))
+        logger.info(f"[stage1] Metadata written → {metadata_path}")
+
+        return short_file
+
+    # If download failed after retries → NO metadata file
+    logger.info("[stage1] Download failed; no metadata written")
+    return None
 
 
 # ==============================================================================

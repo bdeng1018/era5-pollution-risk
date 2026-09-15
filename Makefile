@@ -2,7 +2,7 @@
 # ERA5 Pollution Risk Pipeline — Branch 2
 # Makefile for running pipeline stages in correct sequence.
 #
-# CDS API Credentials (Required for Stage 1)
+# CDS API Credentials (Required for Stage 01 — IR₀)
 # ------------------------------------------------------------------------------
 # ERA5 downloads require valid CDS API credentials exported in your shell:
 #
@@ -18,26 +18,29 @@
 #   echo $$CDSAPI_URL
 #   echo $$CDSAPI_KEY
 #
-# Without these variables, Stage 1 (download) will fail immediately.
+# Without these variables, Stage 01 (IR₀ ingestion) will fail immediately.
 #
-# Branch 2 Status Summary
+# Branch 2 Status Summary (IR₀ → IR₅)
 # ------------------------------------------------------------------------------
-#   ✓ Stage 1: GRIB-only ERA5 download (monthly + single-variable)
-#   ✓ Stage 1: Metadata, retry logic, and full test suite
+#   ✓ Stage 01 → IR₀: Raw ERA5 GRIB ingestion (monthly, multi-variable)
+#   ✓ Stage 01: Metadata, retry logic, and full test suite
 #
-#   ✓ Stage 2: unzip / inspect / convert modules complete
-#   ✓ Stage 2: Full test suite and pipeline orchestration
+#   ✓ Stage 02 → IR₁: Hourly Parquet + metadata.json
+#       (unzip → inspect → convert → IR₀/IR₁ metadata)
 #
-#   ✓ Stage 3: Chunked core processing modules complete
-#   ✓ Stage 3: Orchestration via ChunkOrchestrator
+#   ✓ Stage 03 → IR₂ + IR₃:
+#       IR₂: Chunked parquet tiles (workers)
+#       IR₃: merged.nc + QC (merge step)
 #
-#   ✓ Stage 4: Spatiotemporal compiler implemented
+#   ✓ Stage 04 → IR₄: Spatiotemporal tensor + Stage 4 contracts
 #       (grid → mask → temporal_align → temporal_interpolate → qc → metadata → tensor_builder)
 #
-#   (Stage 5: Feature engineering — planned)
-#   (Stage 6: Dataset assembly + modeling — planned)
-#   (Stage 7: Evaluation + inference — planned)
-#   (Stage 8: Deployment — reserved for Branch 3)
+#   ✓ Stage 05 → IR₅: Feature tensors (completed)
+#       (temporal → spatial → composite → metadata → qc → registry → IR₅ tensor)
+#
+#   (Stage 06 → IR₆: Dataset assembly + modeling — planned)
+#   (Stage 07 → IR₇: Evaluation + inference — planned)
+#   (Stage 08 → IR₈: Deployment — reserved for Branch 3)
 #
 # Notes
 # ------------------------------------------------------------------------------
@@ -46,6 +49,7 @@
 # - Targets are intentionally simple and shell-friendly.
 # - Branch 3 will introduce deployment targets (docker, fastapi, mlflow).
 # ==============================================================================
+
 
 PYTHON := python
 
@@ -73,20 +77,20 @@ env: ## Validate environment and required tools
 # Stage 01 — ERA5 Download (GRIB)
 # ==============================================================================
 .PHONY: stage01 download
-stage01: download ## Run Stage 01 (ERA5 GRIB download)
+stage01: download ## Run Stage 01 — ERA5 Download (IR₀)
 	@echo "Stage 01 complete."
 
-download: ## Download monthly ERA5 GRIB files
+download: ## Download Stage 01 monthly ERA5 GRIB files
 	$(PYTHON) -m src.download_01.download_era5_monthly --config configs/config.yml
 
 # ==============================================================================
 # Stage 02 — Preprocessing
 # ==============================================================================
 .PHONY: stage02 preprocess
-stage02: preprocess ## Run Stage 02 (unzip → inspect → convert → metadata)
+stage02: preprocess ## Run Stage 02 — Preprocessing (IR₀ → IR₁)
 	@echo "Stage 02 complete."
 
-preprocess: ## Run preprocessing pipeline
+preprocess: ## Run Stage 02 preprocessing pipeline
 	make clean-idx
 	make clean-cache
 	$(PYTHON) -m src.preprocessing_02.run_preprocessing --config configs/config.yml
@@ -97,10 +101,10 @@ preprocess: ## Run preprocessing pipeline
 # Stage 03 — Chunked Core Processing
 # ==============================================================================
 .PHONY: stage03 core
-stage03: core ## Run Stage 03 (chunk planner → orchestrator → worker → merge)
+stage03: core ## Run Stage 03 — Chunked Core Processing (IR₁ → IR₂ → IR₃)
 	@echo "Stage 03 complete."
 
-core: ## Execute chunked core processing
+core: ## Execute Stage 03 chunked core processing
 	make clean-cache
 	$(PYTHON) -m src.core_03 --config configs/config.yml
 
@@ -108,51 +112,51 @@ core: ## Execute chunked core processing
 # Stage 04 — Spatiotemporal Compiler
 # ==============================================================================
 .PHONY: stage04 spatiotemporal
-stage04: spatiotemporal ## Run Stage 04 (spatiotemporal compiler)
+stage04: spatiotemporal ## Run Stage 04 — Spatiotemporal Compiler (IR₂/IR₃ → IR₄)
 	@echo "Stage 04 complete."
 
-spatiotemporal: ## Execute spatiotemporal compiler driver
+spatiotemporal: ## Execute Stage 04 spatiotemporal compiler driver
 	$(PYTHON) -m src.spatiotemporal_04.driver --config configs/config.yml
 
 # ==============================================================================
-# Stage 05 — Feature Engineering (Placeholder)
+# Stage 05 — Feature Engineering
 # ==============================================================================
-.PHONY: stage05 features
-stage05: features ## Run Stage 05 (feature engineering)
+.PHONY: stage05 features diagnostics05
+stage05: features ## Run Stage 05 — Feature Engineering (IR₄ → IR₅)
 	@echo "Stage 05 complete."
 
-features: ## Stage 5 not yet implemented
-	@echo "Stage 5 (features) is not yet implemented in Branch 2."
+features: ## Execute Stage 05 feature pipeline
+	$(PYTHON) -m src.features_05 --config configs/stage5.yml
 
 # ==============================================================================
 # Stage 06 — Modeling (Placeholder)
 # ==============================================================================
 .PHONY: stage06 train
-stage06: train ## Run Stage 06 (modeling)
+stage06: train ## Run Stage 06 — Modeling (IR₅ → IR₆) — Planned
 	@echo "Stage 06 complete."
 
-train: ## Stage 6 not yet implemented
-	@echo "Stage 6 (modeling) is not yet implemented in Branch 2."
+train: ## Stage 06 not yet implemented
+	@echo "Stage 06 (modeling) is not yet implemented in Branch 2."
 
 # ==============================================================================
 # Stage 07 — Evaluation (Placeholder)
 # ==============================================================================
 .PHONY: stage07 evaluate
-stage07: evaluate ## Run Stage 07 (evaluation)
+stage07: evaluate ## Run Stage 07 — Evaluation (IR₆ → IR₇) — Planned
 	@echo "Stage 07 complete."
 
-evaluate: ## Stage 7 not yet implemented
-	@echo "Stage 7 (evaluation) is not yet implemented in Branch 2."
+evaluate: ## Stage 07 not yet implemented
+	@echo "Stage 07 (evaluation) is not yet implemented in Branch 2."
 
 # ==============================================================================
 # Stage 08 — Deployment (Placeholder)
 # ==============================================================================
 .PHONY: stage08 deploy
-stage08: deploy ## Run Stage 08 (deployment)
+stage08: deploy ## Run Stage 08 — Deployment (IR₇ → IR₈) — Reserved for Branch 3
 	@echo "Stage 08 complete."
 
-deploy: ## Stage 8 reserved for Branch 3
-	@echo "Stage 8 (deployment) reserved for Branch 3."
+deploy: ## Stage 08 reserved for Branch 3
+	@echo "Stage 08 (deployment) reserved for Branch 3."
 
 # ==============================================================================
 # Testing
@@ -173,11 +177,11 @@ format: ## Format Python code (Black → Ruff)
 	ruff format src tests scripts models
 
 # ==============================================================================
-# Full Pipeline — Stages 01–04
+# Full Pipeline — Stages 01–05
 # ==============================================================================
 .PHONY: run all
-run: stage01 stage02 stage03 stage04 ## Run full pipeline (Stages 01–04)
-	@echo "Full pipeline (Stages 01–04) complete."
+run: stage01 stage02 stage03 stage04 stage05 ## Run full pipeline (Stages 01–05)
+	@echo "Full pipeline (Stages 01–05) complete."
 
 all: run ## Alias for full pipeline
 
@@ -211,17 +215,20 @@ clean-intermediate: clean-cache clean-pyc clean-idx ## Remove intermediate artif
 	rm -rf data/metadata/*
 	rm -rf data/predictions/*
 
-clean-stage1: ## Remove Stage 01 artifacts
+clean-stage01: ## Remove Stage 01 artifacts
 	rm -rf data/raw/era5/*/*.idx
 
-clean-stage2: ## Remove Stage 02 artifacts
+clean-stage02: ## Remove Stage 02 artifacts
 	rm -rf data/intermediate/*
 
-clean-stage3: ## Remove Stage 03 artifacts
+clean-stage03: ## Remove Stage 03 artifacts
 	rm -rf data/chunks/* data/chunks_metadata/*
 
-clean-stage4: ## Remove Stage 04 artifacts
+clean-stage04: ## Remove Stage 04 artifacts
 	rm -rf data/spatiotemporal/*
+
+clean-stage05: ## Remove Stage 05 artifacts
+	rm -rf data/features/*
 
 reset-soft: clean-intermediate ## Soft reset (preserve raw GRIB)
 	@echo "Soft reset complete (raw GRIB preserved)."

@@ -28,9 +28,9 @@ from pathlib import Path
 
 import pandas as pd
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Required ERA5 variables for your pipeline
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 REQUIRED_VARIABLES = [
     "t2m",
@@ -47,9 +47,9 @@ REQUIRED_VARIABLES = [
     "tcwv",
 ]
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Main diagnostic
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def run_stage1_variable_presence(stage1_dir: str, output_path: str) -> None:
@@ -93,7 +93,6 @@ def run_stage1_variable_presence(stage1_dir: str, output_path: str) -> None:
         # Read first parquet file
         try:
             df = pd.read_parquet(parquet_files[0])
-            readable = True
         except Exception as e:
             results[var] = {
                 "exists": True,

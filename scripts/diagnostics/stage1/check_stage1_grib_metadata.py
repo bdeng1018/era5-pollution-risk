@@ -26,16 +26,11 @@ A JSON diagnostic report saved to:
 import json
 from pathlib import Path
 
-from eccodes import (
-    codes_get,
-    codes_get_array,
-    codes_grib_new_from_file,
-    codes_release,
-)
+from eccodes import codes_get, codes_get_array, codes_grib_new_from_file, codes_release
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Helper: safe GRIB key getter
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def _safe_get(handle, key):
@@ -52,9 +47,9 @@ def _safe_get_array(handle, key):
         return None
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Main diagnostic
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def run_stage1_grib_metadata(grib_path: str, output_path: str) -> None:

@@ -27,8 +27,15 @@ import pickle
 import xarray as xr
 import yaml
 
-from src.spatiotemporal_04 import (grid, mask, metadata, qc, temporal_align,
-                                   temporal_interpolate, tensor_builder)
+from src.spatiotemporal_04 import (
+    grid,
+    mask,
+    metadata,
+    qc,
+    temporal_align,
+    temporal_interpolate,
+    tensor_builder,
+)
 
 # ==============================================================================
 # CONFIG LOADER
@@ -110,7 +117,7 @@ def run_stage4(
     # --------------------------------------------------------------------------
     # 6. TEMPORAL INTERPOLATION
     # --------------------------------------------------------------------------
-    ds_interpolated, interp_contract = temporal_interpolate.process_interpolation(
+    ds_interpolated, _interp_contract = temporal_interpolate.process_interpolation(
         ds_aligned, fields
     )
 

@@ -74,7 +74,7 @@ def test_stage4_acceptance():
     )
     assert "aligned_time" in temporal_contract
 
-    ds_interpolated, interp_contract = temporal_interpolate.process_interpolation(
+    ds_interpolated, _interp_contract = temporal_interpolate.process_interpolation(
         ds_aligned, fields
     )
 

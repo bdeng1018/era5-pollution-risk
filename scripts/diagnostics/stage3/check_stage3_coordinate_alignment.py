@@ -62,9 +62,9 @@ FLUX_VARS = {"e", "slhf", "sshf", "ssr", "ssrc", "ssrd", "str", "tp"}
 STATIC_VARS = {"lsm"}
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Metadata loading (key‑indexed)
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def load_metadata() -> dict:
@@ -78,15 +78,15 @@ def get_one_parquet_for_variable(metadata: dict, var: str) -> str | None:
     """
     Return ONE parquet path for a variable by scanning key‑indexed metadata.
     """
-    for key, entry in metadata.items():
+    for entry in metadata.values():
         if entry.get("variable") == var:
             return entry.get("path")
     return None
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Parquet coordinate extraction
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def extract_coords(path: str) -> tuple[pd.Series, pd.Series] | None:
@@ -97,9 +97,9 @@ def extract_coords(path: str) -> tuple[pd.Series, pd.Series] | None:
         return None
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Alignment logic
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def compare_arrays(ref: pd.Series, other: pd.Series):
@@ -178,9 +178,9 @@ def diagnose_alignment(metadata: dict):
         print(f"Static variable: {var} — grid differences expected ✔\n")
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Main
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def main():
@@ -191,7 +191,7 @@ def main():
         default=100.0,
         help="Sampling percentage (unused in metadata-based diagnostic).",
     )
-    args = parser.parse_args()
+    parser.parse_args()
 
     metadata = load_metadata()
     diagnose_alignment(metadata)

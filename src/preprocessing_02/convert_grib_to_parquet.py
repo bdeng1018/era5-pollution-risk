@@ -72,20 +72,26 @@ FILENAME_TO_SHORTNAME = {
 
 KNOWN_ERA5_VARS = list(FILENAME_TO_SHORTNAME.values())
 
-# ==============================================================================
-# Flux variables (accumulated, different grid, NOT safe for Stage 3 merge)
-# ==============================================================================
-
 FLUX_VARS = {"slhf", "sshf", "ssr", "ssrc", "ssrd", "str", "tp", "e"}
 
 # ==============================================================================
-# Multi-variable probing (lazy heavy imports)
+# Lazy heavy imports
+# ==============================================================================
+
+
+def _xr():
+    import xarray as xr
+
+    return xr
+
+
+# ==============================================================================
+# Multi-variable probing
 # ==============================================================================
 
 
 def list_grib_variables(grib_path: Path) -> list[str]:
-    import xarray as xr
-
+    xr = _xr()
     vars = []
     for var in KNOWN_ERA5_VARS:
         try:
@@ -109,13 +115,10 @@ def list_grib_variables(grib_path: Path) -> list[str]:
 
 def is_single_variable_grib(path: Path) -> bool:
     parts = path.stem.split("_")
-
     if parts[0].lower() == "era5":
         return False
-
     if len(parts) < 3:
         return False
-
     year = parts[-2]
     month = parts[-1]
     return year.isdigit() and month.isdigit()
@@ -129,7 +132,6 @@ def is_single_variable_grib(path: Path) -> bool:
 def _convert_dataset_to_parquet(
     ds, grib_path: Path, intermediate_dir: Path, var: str
 ) -> dict:
-
     parts = grib_path.stem.split("_")
     year = int(parts[-2])
     month = int(parts[-1])
@@ -137,14 +139,11 @@ def _convert_dataset_to_parquet(
     output_dir = intermediate_dir / str(year) / f"{month:02d}" / var
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # --------------------------------------------------------------------------
-    # STATIC OVERRIDE: lsm is ALWAYS static
-    # --------------------------------------------------------------------------
+    # STATIC OVERRIDE
     if var == "lsm":
         logger.info(f"[convert] {var} forced static (land-sea mask).")
         df = ds.to_dataframe().reset_index()
 
-        # --- SAFE COORDINATE NORMALIZATION ---
         cols = df.columns
         if "valid_time" in cols and "time" in cols:
             df = df.drop(columns=["time"])
@@ -164,9 +163,7 @@ def _convert_dataset_to_parquet(
             "is_flux": False,
         }
 
-    # --------------------------------------------------------------------------
-    # STATIC / MONTHLY FIELDS (rare)
-    # --------------------------------------------------------------------------
+    # STATIC / MONTHLY
     if "time" not in ds.coords and "valid_time" not in ds:
         logger.warning(
             f"[convert] {var} in {grib_path.name} has no time/valid_time → static/monthly."
@@ -174,7 +171,6 @@ def _convert_dataset_to_parquet(
 
         df = ds.to_dataframe().reset_index()
 
-        # --- SAFE COORDINATE NORMALIZATION ---
         cols = df.columns
         if "valid_time" in cols and "time" in cols:
             df = df.drop(columns=["time"])
@@ -224,10 +220,7 @@ def _convert_dataset_to_parquet(
     #   - IR₁ → IR₂ evolution is clean and restart-safe
     # --------------------------------------------------------------------------
 
-    # --------------------------------------------------------------------------
     # HOURLY FIELDS (instantaneous or flux)
-    # --------------------------------------------------------------------------
-
     hourly_meta = {"timestamps": [], "parquet_files": {}, "is_static": False}
 
     # Always use 'time' — NEVER use 'valid_time'
@@ -305,7 +298,7 @@ def _convert_dataset_to_parquet(
 
 
 def convert_single_variable(grib_path: Path, intermediate_dir: Path) -> dict:
-    import xarray as xr
+    xr = _xr()
 
     logger.info(f"[convert] Single-variable GRIB → {grib_path.name}")
 
@@ -350,7 +343,7 @@ def convert_single_variable(grib_path: Path, intermediate_dir: Path) -> dict:
 
 
 def convert_multi_variable(grib_path: Path, intermediate_dir: Path) -> dict:
-    import xarray as xr
+    xr = _xr()
 
     logger.info(f"[convert] Multi-variable GRIB → {grib_path.name}")
 
@@ -361,7 +354,7 @@ def convert_multi_variable(grib_path: Path, intermediate_dir: Path) -> dict:
 
     for var in vars:
         try:
-            ds = ds = xr.open_dataset(
+            ds = xr.open_dataset(
                 grib_path,
                 engine="cfgrib",
                 filter_by_keys={"shortName": var},

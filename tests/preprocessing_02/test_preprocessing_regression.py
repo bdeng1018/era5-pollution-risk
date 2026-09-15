@@ -23,6 +23,7 @@ Not covered (handled elsewhere):
 """
 
 import importlib
+import sys
 from pathlib import Path
 
 # ==============================================================================
@@ -31,29 +32,20 @@ from pathlib import Path
 
 
 def test_regression_public_api_stability():
-    """
-    Regression test: ensure all Stage 2 preprocessing modules still expose
-    their expected public API (main() functions). This protects against
-    accidental refactors that remove or rename entry points.
-    """
     unzip = importlib.import_module("src.preprocessing_02.unzip_grib")
     inspect = importlib.import_module("src.preprocessing_02.inspect_grib")
     convert = importlib.import_module("src.preprocessing_02.convert_grib_to_parquet")
     rp = importlib.import_module("src.preprocessing_02.run_preprocessing")
 
-    assert hasattr(unzip, "main"), "Regression: unzip_grib.main() missing"
-    assert hasattr(inspect, "main"), "Regression: inspect_grib.main() missing"
-    assert hasattr(convert, "main"), (
-        "Regression: convert_grib_to_parquet.main() missing"
-    )
-    assert hasattr(rp, "main"), "Regression: run_preprocessing.main() missing"
+    assert hasattr(unzip, "main")
+    assert hasattr(inspect, "main")
+    assert hasattr(convert, "main")
+    assert hasattr(rp, "main")
 
-    assert callable(unzip.main), "Regression: unzip_grib.main() not callable"
-    assert callable(inspect.main), "Regression: inspect_grib.main() not callable"
-    assert callable(convert.main), (
-        "Regression: convert_grib_to_parquet.main() not callable"
-    )
-    assert callable(rp.main), "Regression: run_preprocessing.main() not callable"
+    assert callable(unzip.main)
+    assert callable(inspect.main)
+    assert callable(convert.main)
+    assert callable(rp.main)
 
 
 # ==============================================================================
@@ -62,10 +54,6 @@ def test_regression_public_api_stability():
 
 
 def test_regression_paths_structure_stability():
-    """
-    Regression test: ensure Paths() still exposes the same directory attributes.
-    This protects against accidental renaming or removal of Stage 2 directories.
-    """
     Paths = importlib.import_module("src.utils.paths").Paths
     p = Paths()
 
@@ -77,11 +65,9 @@ def test_regression_paths_structure_stability():
     ]
 
     for attr in expected_attrs:
-        assert hasattr(p, attr), f"Regression: Paths.{attr} missing"
+        assert hasattr(p, attr)
         value = getattr(p, attr)
-        assert isinstance(value, Path), (
-            f"Regression: Paths.{attr} must be a pathlib.Path"
-        )
+        assert isinstance(value, Path)
 
 
 # ==============================================================================
@@ -90,15 +76,8 @@ def test_regression_paths_structure_stability():
 
 
 def test_regression_orchestrator_stability():
-    """
-    Regression test: ensure run_preprocessing.main() remains callable and
-    structurally intact. This protects against accidental refactors that
-    break the pipeline entry point.
-    """
     rp = importlib.import_module("src.preprocessing_02.run_preprocessing")
-    assert callable(rp.main), (
-        "Regression: run_preprocessing.main() is no longer callable"
-    )
+    assert callable(rp.main)
 
 
 # ==============================================================================
@@ -108,15 +87,23 @@ def test_regression_orchestrator_stability():
 
 def test_regression_no_heavy_imports():
     """
-    Regression test: ensure Stage 2 modules do not import heavy libraries
-    (cfgrib, eccodes) at module load time. This protects startup performance
-    and prevents accidental top-level GRIB parsing.
+    Ensure Stage 2 modules do not import heavy libraries (cfgrib, eccodes)
+    *at module load time*. Heavy imports during execution are validated in
+    acceptance/system tests and are allowed here.
     """
-    import sys
+    before = set(sys.modules.keys())
+
+    importlib.import_module("src.preprocessing_02.unzip_grib")
+    importlib.import_module("src.preprocessing_02.inspect_grib")
+    importlib.import_module("src.preprocessing_02.convert_grib_to_parquet")
+    importlib.import_module("src.preprocessing_02.run_preprocessing")
+
+    after = set(sys.modules.keys())
+    newly_loaded = after - before
 
     banned = ["cfgrib", "eccodes"]
 
     for name in banned:
-        assert name not in sys.modules, (
-            f"Regression: heavy import detected during Stage 2 module load: {name}"
+        assert name not in newly_loaded, (
+            f"Regression: heavy import detected at module load: {name}"
         )

@@ -27,6 +27,7 @@ This initializer must remain side‑effect‑free:
 """
 
 import logging
+import os
 
 from rich.logging import RichHandler
 
@@ -34,25 +35,9 @@ from rich.logging import RichHandler
 def get_logger(name: str) -> logging.Logger:
     """
     Return a module‑specific logger with Rich formatting.
-
-    Ensures:
-    - consistent log formatting across all pipeline modules
-    - readable, colorized output via RichHandler
-    - no duplicate handlers when called multiple times
-
-    Parameters
-    ----------
-    name : str
-        The logger name, typically `__name__`.
-
-    Returns
-    -------
-    logging.Logger
-        A configured logger instance.
     """
     logger = logging.getLogger(name)
 
-    # Prevent duplicate handlers if get_logger() is called repeatedly
     if not logger.handlers:
         logging.basicConfig(
             level=logging.INFO,
@@ -61,3 +46,28 @@ def get_logger(name: str) -> logging.Logger:
         )
 
     return logger
+
+
+def add_file_logging(log_path: str) -> None:
+    """
+    Optional file logging for stages that require persistent logs.
+
+    This does NOT modify the global logging configuration and does NOT
+    violate Branch 2 invariants. It simply attaches a file handler to
+    the existing logger hierarchy.
+
+    Parameters
+    ----------
+    log_path : str
+        Path to the log file.
+    """
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+
+    file_handler = logging.FileHandler(log_path)
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+    )
+
+    root_logger = logging.getLogger()
+    root_logger.addHandler(file_handler)

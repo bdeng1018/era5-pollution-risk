@@ -32,9 +32,9 @@ import numpy as np
 import xarray as xr
 from scipy.ndimage import label
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Utility functions
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def _compute_valid_fraction(mask: np.ndarray) -> float:
@@ -70,13 +70,13 @@ def _count_holes(mask: np.ndarray) -> int:
 
 def _count_contiguous_regions(mask: np.ndarray) -> int:
     """Count contiguous True regions using connected-component labeling."""
-    labeled, num_regions = cast(tuple[np.ndarray, int], label(mask.astype(int)))
+    _labeled, num_regions = cast(tuple[np.ndarray, int], label(mask.astype(int)))
     return num_regions
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Diagnostic entry point
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def run_mask_diagnostic(dataset_path: str, output_path: str) -> None:
@@ -99,9 +99,9 @@ def run_mask_diagnostic(dataset_path: str, output_path: str) -> None:
 
     mask = ds["mask"].values
 
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     # Shape consistency check
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
 
     if ("lat" not in ds) or ("lon" not in ds):
         raise ValueError("[Stage 4][mask_diag] Dataset missing lat/lon coordinates")
@@ -115,9 +115,9 @@ def run_mask_diagnostic(dataset_path: str, output_path: str) -> None:
             f"lat/lon grid ({lat.size}, {lon.size})"
         )
 
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     # Compute diagnostics
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
 
     valid_fraction = _compute_valid_fraction(mask)
     hole_count = _count_holes(mask)
@@ -142,9 +142,9 @@ def run_mask_diagnostic(dataset_path: str, output_path: str) -> None:
         and not all_false
     )
 
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     # Build report
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
 
     report = {
         "mask_shape": mask_shape,
@@ -156,9 +156,9 @@ def run_mask_diagnostic(dataset_path: str, output_path: str) -> None:
         "mask_pass": mask_pass,
     }
 
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     # Save report
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
 
     out_path = Path(output_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)

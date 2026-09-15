@@ -30,9 +30,9 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Utility functions
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def _count_interpolated_timestamps(original_time, aligned_time):
@@ -90,9 +90,9 @@ def _detect_plateaus(arr: np.ndarray, length: int = 3) -> int:
     return int(count)
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Diagnostic entry point
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def run_temporal_interpolation_diagnostic(dataset_path: str, output_path: str) -> None:
@@ -112,9 +112,9 @@ def run_temporal_interpolation_diagnostic(dataset_path: str, output_path: str) -
 
     time = ds["time"].values
 
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     # Reconstruct original_time from NetCDF‑safe attributes
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
 
     required = ["original_time_min", "original_time_max", "original_time_len"]
     missing = [k for k in required if k not in ds.attrs]
@@ -138,9 +138,9 @@ def run_temporal_interpolation_diagnostic(dataset_path: str, output_path: str) -
     # Convert back to datetime64
     original_time = orig_ns.astype("datetime64[ns]")
 
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     # Compute interpolation diagnostics
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
 
     added_timestamps = _count_interpolated_timestamps(original_time, time)
     interpolated_fraction = _compute_interpolated_fraction(original_time, time)
@@ -178,9 +178,9 @@ def run_temporal_interpolation_diagnostic(dataset_path: str, output_path: str) -
         v == 0 for v in per_variable_nan_after_interp.values()
     )
 
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     # Build report
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
 
     report = {
         "added_timestamps": added_timestamps,
@@ -191,9 +191,9 @@ def run_temporal_interpolation_diagnostic(dataset_path: str, output_path: str) -
         "interp_pass": interp_pass,
     }
 
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     # Save report
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
 
     out_path = Path(output_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)

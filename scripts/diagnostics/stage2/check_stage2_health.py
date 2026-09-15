@@ -54,9 +54,9 @@ from pathlib import Path
 
 import pandas as pd
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Configuration
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 INTERMEDIATE_ROOT = Path("data/intermediate")
 METADATA_PATH = Path("data/metadata/metadata.json")
@@ -64,9 +64,9 @@ METADATA_PATH = Path("data/metadata/metadata.json")
 REQUIRED_COORDS = {"latitude", "longitude", "valid_time"}
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Directory-First Sampling
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def list_stage2_directories(root: Path) -> list[Path]:
@@ -100,9 +100,9 @@ def sample_files(files: list[Path], pct: float) -> list[Path]:
     return random.sample(files, n)
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Parquet Checks
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def read_parquet_safe(path: Path) -> pd.DataFrame | None:
@@ -160,9 +160,9 @@ def diagnose_single_file(path: Path) -> tuple[Path, str] | None:
     return None
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Metadata Checks (Key‑Indexed Schema)
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def load_metadata() -> dict | None:
@@ -190,7 +190,7 @@ def diagnose_metadata_consistency() -> list[str]:
 
     for key, entry in metadata.items():
         try:
-            ts, var = parse_metadata_key(key)
+            _ts, _var = parse_metadata_key(key)
         except ValueError as e:
             issues.append(str(e))
             continue
@@ -220,9 +220,9 @@ def diagnose_timestamp_alignment() -> list[str]:
         return ["metadata.json missing or unreadable"]
 
     timestamps = []
-    for key in metadata.keys():
+    for key in metadata:
         try:
-            ts, var = parse_metadata_key(key)
+            ts, _var = parse_metadata_key(key)
             timestamps.append(ts)
         except ValueError as e:
             issues.append(str(e))
@@ -236,9 +236,9 @@ def diagnose_timestamp_alignment() -> list[str]:
     return issues
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Parallel Diagnostic
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def parallel_diagnose(paths: list[Path]) -> list[tuple[Path, str]]:
@@ -247,9 +247,9 @@ def parallel_diagnose(paths: list[Path]) -> list[tuple[Path, str]]:
     return [r for r in results if r is not None]
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Main Entry Point
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 def main() -> None:

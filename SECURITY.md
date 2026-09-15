@@ -22,6 +22,24 @@ Those components are reserved for Branch 3.
 
 ---
 
+## ⚠️ Import‑Time Safety
+
+Stage 2 modules must remain **lightweight at import time**:
+
+- Heavy libraries such as `cfgrib`, `eccodes`, and `xarray` **must not** be imported at module load.
+- Heavy imports **are allowed during runtime**, inside lazy helpers used for GRIB → Parquet conversion.
+
+This protects:
+
+- startup performance
+- deterministic import behavior
+- reproducibility guarantees
+- test stability (unit/integration/regression)
+
+Runtime GRIB decoding is validated in system/acceptance tests, not in security tests.
+
+---
+
 ## 📣 Reporting a Vulnerability
 
 Please report all security, data‑integrity, or reproducibility issues privately.
@@ -82,16 +100,21 @@ For non‑security issues (tests, formatting, diagnostics, Makefile targets, VS 
 
 Branch 2 introduces:
 
-- multi‑year ERA5 ingestion
-- GRIB preprocessing
-- chunked core processing
-- spatiotemporal tensor compilation
+- multi‑year ERA5 ingestion (Stage 01)
+- GRIB preprocessing (Stage 02)
+- chunked core processing (Stage 03)
+- spatiotemporal tensor compilation (Stage 04)
 - feature engineering (Stage 05)
 - modeling (Stage 06)
 - evaluation (Stage 07)
 - deployment scaffolding (Stage 08)
 - deterministic Makefile orchestration
 - VS Code workspace tooling (tasks, launch, settings, extensions)
+
+#### Import‑time safety
+
+Heavy GRIB‑decoding libraries (`cfgrib`, `eccodes`, `xarray`) are loaded **only at runtime** inside conversion functions.
+Stage 2 module import remains lightweight and deterministic.
 
 No AI/RAG/LLM/agentic inference is used in Branch 2.
 

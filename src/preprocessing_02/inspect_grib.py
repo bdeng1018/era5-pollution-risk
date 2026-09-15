@@ -85,48 +85,80 @@ def is_single_variable_grib(path: Path) -> bool:
 
 
 def inspect_grib_single(grib_path: Path):
-    import xarray as xr
+    import eccodes
 
     if not is_single_variable_grib(grib_path):
         return None
 
     logger.info(f"[inspect] Inspecting single-variable GRIB: {grib_path.name}")
 
-    parts = grib_path.stem.split("_")
-    filename_var = "_".join(parts[:-2])
-
-    from src.preprocessing_02.convert_grib_to_parquet import \
-        FILENAME_TO_SHORTNAME
-
-    shortname = FILENAME_TO_SHORTNAME.get(filename_var, filename_var)
+    variables = set()
+    lat = None
+    lon = None
+    times = set()
 
     try:
-        ds = xr.open_dataset(
-            grib_path,
-            engine="cfgrib",
-            filter_by_keys={"shortName": shortname},
+        index = eccodes.codes_index_new_from_file(
+            str(grib_path), "shortName,dataDate,dataTime"
         )
 
-        if not ds.data_vars:
-            logger.warning(
-                f"[inspect] filter_by_keys({shortname}) empty → full open fallback."
-            )
-            ds = xr.open_dataset(grib_path, engine="cfgrib")
+        shortnames = eccodes.codes_index_get(index, "shortName") or []
+
+        for shortName in shortnames:
+            variables.add(shortName)
+            eccodes.codes_index_select(index, "shortName", shortName)
+
+            while True:
+                gid = eccodes.codes_index_get(index, "message")
+                if gid is None:
+                    break
+
+                try:
+                    dataDate = eccodes.codes_get(gid, "dataDate")
+                    dataTime = eccodes.codes_get(gid, "dataTime")
+                    if dataDate is not None and dataTime is not None:
+                        times.add(dataDate * 100 + dataTime)
+                except Exception:
+                    pass
+
+                if lat is None or lon is None:
+                    try:
+                        lat = eccodes.codes_get(gid, "Nj")
+                        lon = eccodes.codes_get(gid, "Ni")
+                    except Exception:
+                        pass
+
+                eccodes.codes_release(gid)
+
+        eccodes.codes_index_release(index)
+
+        dims = {
+            "time": len(times),
+            "lat": lat,
+            "lon": lon,
+        }
+
+        return {
+            "path": str(grib_path),
+            "variables": sorted(variables),
+            "dims": dims,
+            "coords": ["time", "lat", "lon"],
+            "size_bytes": grib_path.stat().st_size,
+            "error": None,
+        }
 
     except Exception as e:
-        logger.error(f"[inspect] Failed to open {grib_path}: {e}")
-        return None
-
-    logger.info(f"[inspect] Dimensions: {ds.sizes}")
-    logger.info(f"[inspect] Variables: {list(ds.data_vars)}")
-
-    return {
-        "path": str(grib_path),
-        "variables": list(ds.data_vars),
-        "dims": dict(ds.sizes),
-        "coords": list(ds.coords),
-        "error": None,
-    }
+        logger.error(
+            f"[inspect] Failed to inspect single-variable GRIB {grib_path}: {e}"
+        )
+        return {
+            "path": str(grib_path),
+            "variables": [],
+            "dims": {},
+            "coords": [],
+            "size_bytes": grib_path.stat().st_size,
+            "error": str(e),
+        }
 
 
 # ==============================================================================

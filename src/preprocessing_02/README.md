@@ -26,6 +26,24 @@ ZIP ingestion is supported only for backward compatibility; Branch 2 uses GRIB
 
 ---
 
+## ⚠️ Heavy‑Import Policy
+
+Stage 2 must remain **lightweight at import time**:
+
+- Heavy libraries (`cfgrib`, `eccodes`, `xarray`) **must not** be imported at module load.
+- Heavy imports **are allowed during conversion**, inside lazy helpers such as `_xr()`.
+
+This ensures:
+
+- Fast startup
+- Deterministic import behavior
+- Clean IR boundaries
+- Compatibility with Stage 2 unit/integration/regression tests
+
+Stage 2 tests enforce **import‑time purity only**, not runtime purity.
+
+---
+
 ## 🧭 Branch Philosophy
 
 ### Branch 1 — MVP Pipeline
@@ -57,7 +75,7 @@ A robust, scalable Stage 2 pipeline:
 
 Branch 2 is the first branch where Stage 2 becomes a real pipeline.
 
-### Branch 3 - AI/LLM/RAG Enhancements (Future)
+### Branch 3 — AI/LLM/RAG Enhancements (Future)
 
 Stage 2 remains deterministic, but Branch 3 may introduce:
 
@@ -161,7 +179,7 @@ Contains normalized hourly timestamps and Parquet paths.
 
 ## 🗂 Canonical Hourly Metadata (`metadata.json`)
 
-Stage 2 produces a **Parquet-only** metadata.json containing **only instantaneous hourly variables:**
+Stage 2 produces a **Parquet-only** `metadata.json` containing **only instantaneous hourly variables:**
 
 ```json
 {
@@ -198,24 +216,34 @@ This is the Stage 2 → Stage 3 contract.
 
 ## 🧪 Testing Strategy
 
-### Branch 1
+### Unit Tests
 
-- GRIB → Parquet smoke tests
-- Validate hourly timestamps
-- Validate Parquet schema
-- Validate directory creation
+- Structural validation
+- Function existence
+- Paths() resolution
+- Import‑time heavy‑import checks
 
-### Branch 2
+### Integration Tests
 
-- Multi‑variable GRIB inspection tests
-- `.idx` generation tests
-- Schema + dimension validation
-- Multi‑variable conversion tests
-- Hourly slicing tests
-- Static variable handling tests
-- Full pipeline orchestration tests
-- `metadata.json` correctness tests
-- Stage 3‑readiness diagnostics
+- unzip → inspect → convert wiring
+- run_preprocessing structural behavior
+- Import‑time purity checks
+
+### System/Acceptance Tests (outside Stage 2)
+
+- Actual GRIB ingestion
+- cfgrib index generation
+- Parquet schema correctness
+- Multi-variable ingestion
+- Performance
+- Retry logic
+
+### Regression Tests
+
+- Public API stability
+- Paths stability
+- Orchestrator stability
+- Import‑time heavy‑import checks
 
 ---
 
@@ -263,6 +291,8 @@ Stage 2 is intentionally modular:
 
 - Each operation is isolated (`inspect`, `convert`, `metadata`)
 - The orchestrator (`run_preprocessing.py`) ties them together
+- Heavy imports occur only inside conversion functions
+- Tests enforce import‑time purity, not runtime purity
 - Branch 3 parallelization wraps the orchestrator, not the utilities
 
 This keeps the pipeline clean, testable, and scalable.

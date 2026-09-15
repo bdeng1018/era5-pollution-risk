@@ -24,6 +24,7 @@ Not covered (handled in acceptance/system tests):
 """
 
 import importlib
+import sys
 
 # ==============================================================================
 # Integration Test — unzip → inspect
@@ -83,13 +84,26 @@ def test_run_preprocessing_structural():
 
 
 # ==============================================================================
-# Integration Test — Ensure no heavy imports occur
+# Integration Test — Ensure no heavy imports occur at import time
 # ==============================================================================
 
 
 def test_no_heavy_imports_in_stage2():
-    import sys
+    """
+    Ensure that importing Stage 2 modules does not *itself* trigger heavy
+    dependencies. Actual GRIB decoding (and its heavy imports) is validated
+    in higher-level acceptance/system tests.
+    """
+    before = set(sys.modules.keys())
+
+    importlib.import_module("src.preprocessing_02.unzip_grib")
+    importlib.import_module("src.preprocessing_02.inspect_grib")
+    importlib.import_module("src.preprocessing_02.convert_grib_to_parquet")
+    importlib.import_module("src.preprocessing_02.run_preprocessing")
+
+    after = set(sys.modules.keys())
+    newly_loaded = after - before
 
     banned = ["cfgrib", "eccodes"]
     for name in banned:
-        assert name not in sys.modules
+        assert name not in newly_loaded

@@ -19,12 +19,14 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import xarray as xr
+
 # Deterministic artifact hashing (C++ boundary module)
 from boundary_hash import sha256_file
 
 # ==============================================================================
 # LOAD CHUNK OUTPUTS
 # ==============================================================================
+
 
 def load_chunk_outputs(
     chunk_specs: list[Any], config: dict[str, Any]
@@ -75,6 +77,7 @@ def load_chunk_outputs(
 # MERGE DATASETS
 # ==============================================================================
 
+
 def merge_datasets(grouped: dict[str, list[xr.Dataset]]) -> xr.Dataset:
     """
     Merge grouped variable datasets into a unified spatiotemporal dataset.
@@ -110,6 +113,7 @@ def merge_datasets(grouped: dict[str, list[xr.Dataset]]) -> xr.Dataset:
 # METADATA + QC
 # ==============================================================================
 
+
 def build_merged_metadata(ds: xr.Dataset) -> dict[str, Any]:
     return {
         "n_time": ds.sizes["time"],
@@ -134,6 +138,7 @@ def build_merged_qc(ds: xr.Dataset) -> dict[str, Any]:
 # ==============================================================================
 # WRITE OUTPUTS + HASHING
 # ==============================================================================
+
 
 def write_outputs(
     ds: xr.Dataset,
@@ -173,6 +178,7 @@ def write_outputs(
 # ==============================================================================
 # HIGH-LEVEL MERGE ENTRYPOINT
 # ==============================================================================
+
 
 def merge_chunks(chunk_specs: list[Any], config: dict[str, Any]) -> xr.Dataset:
     grouped = load_chunk_outputs(chunk_specs, config)
